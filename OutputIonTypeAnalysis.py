@@ -12,7 +12,11 @@ import os
 import sys
 from PyQt5 import QtWidgets
 from terminalFragmentor_Main import FragmentSite
-import pyperclip
+from terminalFragmentor_Main import print_hits
+from Parameter_Parser_terminal import load_hits_file
+#Not directyy used by the module, but used by FragmentSite
+from terminalFragmentor_Main import ThyIon
+
 
 CONFIG_FILE = 'config.txt'  # config file for saving last directory for fancy filedialog
 
@@ -91,16 +95,16 @@ class FileDialog(QtWidgets.QFileDialog):
         self.tree.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
 
 
-def load_hits_file(filename):
-    """
-    Load a saved (pickled) .hits file and return the stored list of FragmtSites
-    :param filename: full path to file to load
-    :return: list of FragmtSite containers with hits information
-    :rtype: list[FragmentSite]
-    """
-    with open(filename, 'rb') as loadfile:
-        sitelist = pickle.load(loadfile)
-    return sitelist
+# def load_hits_file(filename):
+#     """
+#     Load a saved (pickled) .hits file and return the stored list of FragmtSites
+#     :param filename: full path to file to load
+#     :return: list of FragmtSite containers with hits information
+#     :rtype: list[FragmentSite]
+#     """
+#     with open(filename, 'rb') as loadfile:
+#         sitelist = pickle.load(loadfile)
+#     return sitelist
 
 
 def unpack_hitsfile(files):

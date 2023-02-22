@@ -1,0 +1,500 @@
+<?xml version='1.0' encoding='utf-8'?>
+<interface version="1.2">
+  <object class="tk.Toplevel" id="CIU_app_top">
+    <property name="container">false</property>
+    <property name="height">300</property>
+    <property name="relief">flat</property>
+    <property name="title" translatable="yes">Fragariyo, version 2.0</property>
+    <property name="width">200</property>
+    <child>
+      <object class="ttk.Frame" id="Logo_Panel">
+        <property name="height">75</property>
+        <property name="width">730</property>
+        <layout manager="grid">
+          <property name="column">0</property>
+          <property name="columnspan">3</property>
+          <property name="row">0</property>
+        </layout>
+        <containerlayout manager="grid">
+          <property name="propagate">False</property>
+        </containerlayout>
+        <child>
+          <object class="ttk.Label" id="Logo_Image">
+            <property name="image">logoredo_DP2.png</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="columnspan">3</property>
+              <property name="padx">80</property>
+              <property name="pady">10</property>
+              <property name="row">0</property>
+            </layout>
+            <containerlayout manager="grid">
+              <property name="propagate">False</property>
+            </containerlayout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Button" id="Button_about">
+            <property args="" cbtype="simple" name="command" type="command">on_button_about_clicked</property>
+            <property name="text" translatable="yes">About</property>
+            <layout manager="grid">
+              <property name="column">1</property>
+              <property name="pady">10</property>
+              <property name="row">0</property>
+              <property name="sticky">ne</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Button" id="Button_help">
+            <property args="" cbtype="simple" name="command" type="command">on_button_help_clicked</property>
+            <property name="text" translatable="yes">Help</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="pady">10</property>
+              <property name="row">0</property>
+              <property name="sticky">nw</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="ttk.Frame" id="Frame_Column_1">
+        <property name="height">500</property>
+        <property name="width">300</property>
+        <layout manager="grid">
+          <property name="column">0</property>
+          <property name="row">1</property>
+          <property name="sticky">n</property>
+        </layout>
+        <containerlayout manager="grid">
+          <property name="propagate">False</property>
+        </containerlayout>
+        <child>
+          <object class="ttk.Frame" id="Import_frame">
+            <property name="height">144</property>
+            <property name="relief">ridge</property>
+            <property name="width">285</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="padx">8</property>
+              <property name="pady">5</property>
+              <property name="row">1</property>
+            </layout>
+            <containerlayout manager="grid">
+              <property name="propagate">False</property>
+            </containerlayout>
+            <child>
+              <object class="ttk.Label" id="ImportFiles_label">
+                <property name="font">{Arial} 12 {bold}</property>
+                <property name="text" translatable="yes">II. PreRun Items</property>
+                <property name="width">0</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="columnspan">3</property>
+                  <property name="pady">5</property>
+                  <property name="row">0</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Button" id="Button_modsrepo">
+                <property cbtype="simple" name="command" type="command">on_button_modsrepo_clicked</property>
+                <property name="takefocus">false</property>
+                <property name="text" translatable="yes">Modifications Library</property>
+                <property name="width">20</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="ipadx">60</property>
+                  <property name="ipady">2</property>
+                  <property name="padx">20</property>
+                  <property name="pady">5</property>
+                  <property name="row">1</property>
+                </layout>
+                <containerlayout manager="grid">
+                  <property name="propagate">False</property>
+                </containerlayout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Button" id="Button_IMTBXRenaming">
+                <property cbtype="simple" name="command" type="command">on_button_IMTBXrenamed_clicked</property>
+                <property name="text" translatable="yes">IMTBX ouput extraction and renaming</property>
+                <property name="width">20</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="ipadx">60</property>
+                  <property name="ipady">2</property>
+                  <property name="padx">20</property>
+                  <property name="pady">0</property>
+                  <property name="row">2</property>
+                </layout>
+                <containerlayout manager="grid">
+                  <property name="propagate">False</property>
+                </containerlayout>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Frame" id="Output_frame">
+            <property name="height">100</property>
+            <property name="relief">ridge</property>
+            <property name="width">285</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="padx">8</property>
+              <property name="pady">3</property>
+              <property name="row">0</property>
+            </layout>
+            <containerlayout manager="grid">
+              <property name="propagate">False</property>
+            </containerlayout>
+            <child>
+              <object class="ttk.Label" id="OutputFiles_label">
+                <property name="font">{Arial} 12 {bold}</property>
+                <property name="text" translatable="yes">I. Current Output Directory</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="columnspan">3</property>
+                  <property name="pady">5</property>
+                  <property name="row">0</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Button" id="Button_change_outputdir">
+                <property args="" cbtype="simple" name="command" type="command">on_button_changedir_clicked</property>
+                <property name="text" translatable="yes">Change Output Directory</property>
+                <property name="width">20</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="ipadx">60</property>
+                  <property name="ipady">2</property>
+                  <property name="padx">10</property>
+                  <property name="pady">5</property>
+                  <property name="row">3</property>
+                </layout>
+                <containerlayout manager="grid">
+                  <property name="propagate">False</property>
+                </containerlayout>
+              </object>
+            </child>
+            <child>
+              <object class="tk.Text" id="Text_outputdir">
+                <property name="font">TkDefaultFont</property>
+                <property name="height">0</property>
+                <property name="insertborderwidth">0</property>
+                <property name="insertofftime">0</property>
+                <property name="insertontime">0</property>
+                <property name="insertunfocussed">none</property>
+                <property name="maxundo">0</property>
+                <property name="padx">1</property>
+                <property name="relief">sunken</property>
+                <property name="state">disabled</property>
+                <property name="text" translatable="yes">Please Select a directory to save results!</property>
+                <property name="undo">false</property>
+                <property name="width">40</property>
+                <property name="wrap">char</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="columnspan">1</property>
+                  <property name="padx">10</property>
+                  <property name="pady">5</property>
+                  <property name="row">2</property>
+                </layout>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Frame" id="frame4">
+            <property name="height">144</property>
+            <property name="relief">ridge</property>
+            <property name="width">285</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="padx">8</property>
+              <property name="pady">5</property>
+              <property name="row">2</property>
+            </layout>
+            <containerlayout manager="grid">
+              <property name="propagate">False</property>
+            </containerlayout>
+            <child>
+              <object class="ttk.Label" id="label5">
+                <property name="image">Capture2.PNG</property>
+                <property name="text" translatable="yes">FargariyoLogo (here)</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="padx">40</property>
+                  <property name="row">3</property>
+                </layout>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="ttk.Frame" id="Frame_Column_2">
+        <property name="height">500</property>
+        <property name="width">225</property>
+        <layout manager="grid">
+          <property name="column">1</property>
+          <property name="row">1</property>
+          <property name="sticky">n</property>
+        </layout>
+        <containerlayout manager="grid">
+          <property name="propagate">False</property>
+        </containerlayout>
+        <child>
+          <object class="ttk.Frame" id="Parameters_frame">
+            <property name="height">400</property>
+            <property name="relief">ridge</property>
+            <property name="width">210</property>
+            <layout manager="grid">
+              <property name="column">1</property>
+              <property name="columnspan">2</property>
+              <property name="padx">5</property>
+              <property name="pady">5</property>
+              <property name="row">0</property>
+            </layout>
+            <containerlayout manager="grid">
+              <property name="propagate">False</property>
+            </containerlayout>
+            <child>
+              <object class="ttk.Button" id="Button_termrun">
+                <property cbtype="simple" name="command" type="command">on_terminal_run_clicked</property>
+                <property name="compound">left</property>
+                <property name="takefocus">false</property>
+                <property name="text" translatable="yes">III.I Terminal Run</property>
+                <property name="width">5</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="ipadx">32</property>
+                  <property name="ipady">20</property>
+                  <property name="padx">25</property>
+                  <property name="pady">3</property>
+                  <property name="row">2</property>
+                </layout>
+                <containerlayout manager="grid">
+                  <property name="propagate">False</property>
+                </containerlayout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="Parameters_label">
+                <property name="font">{Arial} 12 {bold}</property>
+                <property name="text" translatable="yes">III. Terminal 
+Fragmentation</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="columnspan">3</property>
+                  <property name="pady">5</property>
+                  <property name="row">0</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Menubutton" id="TerminalOptions">
+                <property name="direction">below</property>
+                <property name="text" translatable="yes">Data Analysis Options</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="ipadx">5</property>
+                  <property name="ipady">5</property>
+                  <property name="padx">25</property>
+                  <property name="pady">10</property>
+                  <property name="row">4</property>
+                </layout>
+                <child>
+                  <object class="tk.Menu" id="menu2">
+                    <property name="cursor">man</property>
+                    <property name="tearoff">false</property>
+                    <child>
+                      <object class="tk.Menuitem.Command" id="Menucommand_singleseqcov">
+                        <property cbtype="simple" name="command" type="command">on_singleseqcov_clicked</property>
+                        <property name="label" translatable="yes">Sequence Coverage (singles)</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="tk.Menuitem.Command" id="Menucommand_comboseqcov">
+                        <property cbtype="simple" name="command" type="command">on_combinedeqcov_clicked</property>
+                        <property name="label" translatable="yes">Sequence Coverage (combined)</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="tk.Menuitem.Command" id="Menucommand_termFragmenplotterInput">
+                        <property cbtype="simple" name="command" type="command">on_termfragplotterinput_clicked</property>
+                        <property name="label" translatable="yes">Sequence Plot (ClipsMS Style)</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="ttk.Frame" id="Frame_Column_3">
+        <property name="height">500</property>
+        <property name="width">225</property>
+        <layout manager="grid">
+          <property name="column">2</property>
+          <property name="row">1</property>
+          <property name="sticky">n</property>
+        </layout>
+        <containerlayout manager="grid">
+          <property name="propagate">False</property>
+        </containerlayout>
+        <child>
+          <object class="ttk.Frame" id="frame6">
+            <property name="height">400</property>
+            <property name="relief">ridge</property>
+            <property name="width">210</property>
+            <layout manager="grid">
+              <property name="column">1</property>
+              <property name="columnspan">2</property>
+              <property name="padx">5</property>
+              <property name="pady">5</property>
+              <property name="row">0</property>
+            </layout>
+            <containerlayout manager="grid">
+              <property name="propagate">False</property>
+            </containerlayout>
+            <child>
+              <object class="ttk.Button" id="Button_importxy">
+                <property cbtype="simple" name="command" type="command">on_button_importxy_clicked</property>
+                <property name="compound">left</property>
+                <property name="text" translatable="yes">IV.I  Input Generator</property>
+                <property name="width">5</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="ipadx">40</property>
+                  <property name="ipady">20</property>
+                  <property name="padx">25</property>
+                  <property name="pady">3</property>
+                  <property name="row">2</property>
+                </layout>
+                <containerlayout manager="grid">
+                  <property name="propagate">False</property>
+                </containerlayout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Button" id="Button_internalrun">
+                <property cbtype="simple" name="command" type="command">on_internal_run_clicked</property>
+                <property name="compound">left</property>
+                <property name="text" translatable="yes">IV.II Internal Run</property>
+                <property name="width">5</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="ipadx">28</property>
+                  <property name="ipady">10</property>
+                  <property name="padx">25</property>
+                  <property name="pady">10</property>
+                  <property name="row">3</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="label2">
+                <property name="font">{Arial} 12 {bold}</property>
+                <property name="text" translatable="yes">      IV. Internal 
+  Fragmentation</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="columnspan">3</property>
+                  <property name="pady">5</property>
+                  <property name="row">0</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Menubutton" id="menubutton1">
+                <property name="direction">below</property>
+                <property name="text" translatable="yes">Data Analysis Options</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="ipadx">5</property>
+                  <property name="ipady">5</property>
+                  <property name="padx">25</property>
+                  <property name="pady">10</property>
+                  <property name="row">4</property>
+                </layout>
+                <child>
+                  <object class="tk.Menu" id="menu1">
+                    <property name="cursor">man</property>
+                    <property name="tearoff">false</property>
+                    <child>
+                      <object class="tk.Menuitem.Command" id="Menucommand_mergingInternal">
+                        <property cbtype="simple" name="command" type="command">on_merginginternal_clicked</property>
+                        <property name="label" translatable="yes">Merging Ouputs</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="tk.Menuitem.Command" id="Menucommand_averagingInternal">
+                        <property cbtype="simple" name="command" type="command">on_averaginginternal_clicked</property>
+                        <property name="label" translatable="yes">Averaging Outputs</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="tk.Menuitem.Command" id="Menucommand_InternalFragmentPlotter">
+                        <property cbtype="simple" name="command" type="command">on_internfragplotter_clicked</property>
+                        <property name="label" translatable="yes">Internal Frag Sequence Plot (ClipsMS Style)</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="ttk.Frame" id="Frame_progress_bar">
+        <property name="height">200</property>
+        <property name="padding">5</property>
+        <property name="relief">ridge</property>
+        <property name="width">400</property>
+        <layout manager="place">
+          <property name="anchor">nw</property>
+          <property name="x">10</property>
+          <property name="y">500</property>
+        </layout>
+        <child>
+          <object class="ttk.Progressbar" id="Progressbar_main">
+            <property name="length">720</property>
+            <property name="maximum">100</property>
+            <property name="mode">determinate</property>
+            <property name="orient">horizontal</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="columnspan">3</property>
+              <property name="pady">2</property>
+              <property name="row">1</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Entry" id="Entry_progress">
+            <property name="font">{@Arial Unicode MS} 12 {bold}</property>
+            <property name="justify">center</property>
+            <property name="text" translatable="yes">Progress</property>
+            <property name="width">71</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="columnspan">3</property>
+              <property name="row">2</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

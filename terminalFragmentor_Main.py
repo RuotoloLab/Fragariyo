@@ -6,6 +6,7 @@ In silico fragmentation of proteins using mass.fast_mass2 from pyteomics
 Pieces of code from Daniel A. Polasky's IMAnnotatorv2
 Pieces of code from Carolina Rojas Ramirez' Fragmentor (internal fragment analysis + Disulfinator)
 """
+
 import time
 import combination
 from PyQt5 import QtWidgets
@@ -19,8 +20,9 @@ import pickle
 import Parameter_Parser_terminal
 import re
 from tkinter import messagebox
-from Modifications import mods_repo
+# from Modifications import mods_repo
 from PeakMatch import matchmaker_terminal_multipass
+import multiprocessing
 
 # update Pyteomics masses to use custom ion types
 mass.std_ion_comp.update({
@@ -85,8 +87,11 @@ class FragmentSite:
         """
         self.seq = sequence
         self.term = terminal
+        #Dictionary to store theoretical ions belonging to this FragmentSite
         self.theo_ions = {}
+        #List to whihc the matched fragment ions are added
         self.hits = []
+        #Obtain sequence index using protein sequence
         self.seq_index = self.get_seq_index(len(protein_seq))
         self.full_protein_seq = protein_seq
         self.startindex = startindex
@@ -106,30 +111,41 @@ class FragmentSite:
 
         #Get cysteine locations
         cysloc = self.resi_dict["C"]
-        # How many cysteines are there?
+        # How many cysteines are there? -Total number cysteines based on location list
         cysloclen = len(self.resi_dict["C"])
 
-        #remove the naturally reduced cysteines
-        #  from the all cysteine locations
-        for cys in cysloc:
-            if cys in self.naturally_reducedcys_ls:
-                # print(cys)
-                cysloclen -= 1
-
-        disulfide_counter = 0
-        # If ss_ls is obtained form uniprot, the uniprot offset is removed in the Parameter_Parser_terminal.py
-        for pair in self.ss_ls:
-            if pair.issubset(cysloc):
-                # print(disulfide)
-                disulfide_counter += 1
-
-        # intrabroken_ss refers to how many disulfides inside the fragment to be broken
-        if self.intrabroken_ss:
-            unboundcys = cysloclen - (disulfide_counter * 2) + (self.intrabroken_ss * 2)
+        #If there are zero cysteines there should not be any unbound cys or disulfide bonds
+        if cysloclen == 0:
+            unboundcys = 0
+            disulfide_counter = 0
         else:
 
-            # Cysteines available for modification, usually considering disulfides reaching outside the fragment
-            unboundcys = cysloclen - (disulfide_counter * 2)
+            #remove the naturally reduced cysteines
+            #  from the all cysteine locations
+            for cys in cysloc:
+                if cys in self.naturally_reducedcys_ls:
+                    # print(cys)
+                    cysloclen -= 1
+
+            disulfide_counter = 0
+            # If ss_ls is obtained form uniprot, the uniprot offset is removed in the Parameter_Parser_terminal.py
+            for pair in self.ss_ls:
+                if pair.issubset(cysloc):
+                    # print(disulfide)
+                    disulfide_counter += 1
+
+            # intrabroken_ss refers to how many disulfides inside the fragment to be broken
+            if self.intrabroken_ss:
+                unboundcys = cysloclen - (disulfide_counter * 2) + (self.intrabroken_ss * 2)
+                if unboundcys > cysloclen:
+                    unboundcys = cysloclen
+
+            else:
+
+                # Cysteines available for modification, usually considering disulfides reaching outside the fragment
+                unboundcys = cysloclen - (disulfide_counter * 2)
+                if unboundcys > cysloclen:
+                    unboundcys = cysloclen
 
         return unboundcys, cysloc, disulfide_counter
 
@@ -151,9 +167,12 @@ class FragmentSite:
         return site_num
 
     #attributes necessary for using FragmentSite as dict keys
+
+    #Attribute to compare if the FragmentsSites are the same based not sequence
     def __eq__(self, other):
         return self.seq == other.seq
 
+    # Attribute to make FragmentSite obj unique items
     def __hash__(self):
         # print(hash(str(self)))
         return hash((self.seq, self.seq_index, self.term))
@@ -166,6 +185,7 @@ class FragmentSite:
         """
         return '<Site> {}-{}/theo: {}_hits: {}'.format(self.term, len(self.seq), len(self.theo_ions),len(self.hits))
 
+    # Representation
     __repr__ = __str__
 
 
@@ -183,6 +203,10 @@ class ThyIon:
         :param charge = int, ion charge
         :param ion_type = str, ion type (e.g. 'a', 'b', 'c', etc...)
         :param ion_type_indx = str, where is the ion type coming from (e.g. '7' for a7, '345' for b345, etcc)
+        :param neutlosses = bool, considered neutral losses (H2O or NH4)
+        :param cys_num = int, number of cysteines
+        :param mono_neutral = int, neutral mass of ion
+        :param cysmods = ls, modifications for disulfide bond breakage
         :param thy_mods = ls, list of modifications (str) in the theoretical ions. for variable modifications the str is composed of {modname}x(number pf mods in the theoretical ion).
         :param cysloc: set, set of indeces (int) where the cys residues are located in the fragment site
         :param ss_count = int, how many intact disulfides are in this theoretical fragment
@@ -233,17 +257,22 @@ def varmod_combos(dict_of_varmods):
     :return: A dictionary of the variable modifications to analyze with the number of modifications
     """
     varmodls = []
+    #how mnay mods to add?
     for varmod in dict_of_varmods:
         for varmod_num in dict_of_varmods[varmod]:
             varmodls.append(f"{varmod}_{varmod_num}")
 
     # print(f"varmodls = {varmodls}")
+
+    #What are the total amount of mods in the fragment
     totvarmods = len(dict_of_varmods)
+
+    #How can they be combined?
     varmodcombos = combination.rSubset(varmodls, totvarmods)
     # print(varmodcombos)
     return varmodcombos
 
-def varmods_processing(FragmentSiteObj, modification, amino, var_mods_dict):
+def varmods_processing(FragmentSiteObj, modification, amino, var_mods_dict, mods_repo):
     """
     Adding variable modifications
     :param FragmentSiteObj: Fragment Site container
@@ -254,10 +283,14 @@ def varmods_processing(FragmentSiteObj, modification, amino, var_mods_dict):
     """
     # Variable mod part
     # print(f"before adding varmods = {mods_repo[modification].current_num}")
+
+    #Current number of modifications on the ion
     varmods_num = mods_repo[modification].current_num
 
+    #Let's place the modifications
     if len(FragmentSiteObj.resi_dict[amino]) >= mods_repo[modification].max_num:
 
+        #Based on the maximun number of modifications allowed
         for num_mod in range(1, mods_repo[modification].max_num + 1):
 
             # print(f"Starting at each num_mod = {mods_repo[modification].current_num}")
@@ -266,6 +299,8 @@ def varmods_processing(FragmentSiteObj, modification, amino, var_mods_dict):
             varmods_num += num_mod
 
             # print(f"mod current num = {varmods_num}")
+
+            #Don't add more than the allowed per modification
             if varmods_num > mods_repo[modification].max_num:
                 continue
             else:
@@ -286,6 +321,8 @@ def varmods_processing(FragmentSiteObj, modification, amino, var_mods_dict):
             # print(f"put {num_mod} times = m/z {(mods_repo[modification].mass) * num_mod}")
             varmods_num += num_mod
             # print(f"mod current num = {varmods_num}")
+
+            # Don't add more modifications than there are residues
             if varmods_num > len(FragmentSiteObj.resi_dict[amino]):
                 continue
             else:
@@ -295,10 +332,11 @@ def varmods_processing(FragmentSiteObj, modification, amino, var_mods_dict):
             varmods_num  -= num_mod
         # mods.remove(modification)
 
+    #Reset mods for each fragment
     mods_repo[modification].current_num = 0
     return var_mods_dict
 
-def modificator(FragmentSiteObj, mod_ls, charge, var_mods_dict, mz_mono, neutral_mono):
+def modificator(FragmentSiteObj, mod_ls, charge, var_mods_dict, mz_mono, neutral_mono, mods_repo):
     """
     Places modifications on a Fragment Site object using all the information necessary
     :param FragmentSiteObj: container for the Fragment Site info
@@ -323,6 +361,8 @@ def modificator(FragmentSiteObj, mod_ls, charge, var_mods_dict, mz_mono, neutral
         # print(f"the modObj is {mods_repo[modification]} with type {type(mods_repo[modification])}")
         # print(f"the FragSite has the an amino acid composition of {FragmentSiteObj.resi_dict}")
         # print(f"the modification {mods_repo[modification]} can be placed on {mods_repo[modification].target_aas}")
+
+        #Place mod if amino acid is there
         if mods_repo[modification].target_aas:
             for amino in mods_repo[modification].target_aas:
                 # print(f"In the  fragment, {amino} is at positions {FragmentSiteObj.resi_dict[amino]}")
@@ -355,7 +395,7 @@ def modificator(FragmentSiteObj, mod_ls, charge, var_mods_dict, mz_mono, neutral
                             mods.append(f"{mods_repo[modification].terminal_flag}-terminal_{mods_repo[modification].name}")
 
                             var_mods_dict[f"{modification}"] = []
-                            var_mods_dict = varmods_processing(FragmentSiteObj, modification, amino, var_mods_dict)
+                            var_mods_dict = varmods_processing(FragmentSiteObj, modification, amino, var_mods_dict, mods_repo)
 
                         else:
                             # print(
@@ -363,13 +403,13 @@ def modificator(FragmentSiteObj, mod_ls, charge, var_mods_dict, mz_mono, neutral
 
                             var_mods_dict[f"{modification}"] = []
                             var_mods_dict = varmods_processing(FragmentSiteObj, modification, amino,
-                                                                     var_mods_dict)
+                                                                     var_mods_dict, mods_repo)
                             # mods.remove(modification)
 
                     else:
                         # print(f"The modification is variable with a max number of {mods_repo[modification].max_num}")
                         var_mods_dict[f"{modification}"] = []
-                        var_mods_dict = varmods_processing(FragmentSiteObj, modification, amino, var_mods_dict)
+                        var_mods_dict = varmods_processing(FragmentSiteObj, modification, amino, var_mods_dict,mods_repo)
 
 
                 else:
@@ -397,7 +437,7 @@ def modificator(FragmentSiteObj, mod_ls, charge, var_mods_dict, mz_mono, neutral
     return mz_mono, neutral_mono, mods, var_mods_dict
 
 
-def mass_calc(frag_counter, FragmentSiteObj, ion_types, maxcharge, neutrals = None, ss_bonds=None, cysmodmass_dict = None, cys_modls = None, cys_num=None, cysloc = None, sscount = None, mod_ls =None, reverse_flag=None):
+def mass_calc(frag_counter, FragmentSiteObj, ion_types, maxcharge, neutrals = None, ss_bonds=None, cysmodmass_dict = None, cys_modls = None, cys_num=None, cysloc = None, sscount = None, mod_ls =None, reverse_flag=None, modificatorrepo = None):
     """
     Function to calculate the mass of theoretical ions based on the current fragment site and pass parameters
     :param frag_counter: int, to keep track of how many theoretical ions are being produced
@@ -420,6 +460,7 @@ def mass_calc(frag_counter, FragmentSiteObj, ion_types, maxcharge, neutrals = No
 
     # print(f"{FragmentSiteObj}")
     # print(f"{FragmentSiteObj.seq}")
+
     #For each ion type
     for ion_type in ion_types:
         #For each charge
@@ -449,15 +490,17 @@ def mass_calc(frag_counter, FragmentSiteObj, ion_types, maxcharge, neutrals = No
             var_mods_dict = {}
             # If disulfides are considered
             if ss_bonds:
+
                 # print(f"ss_bonds = {ss_bonds}")
                 # print(f"cys_num = {cys_num}")
+
                 # If the sequence has not free cysteines for modification
                 if cys_num == 0:
                     #if besides considering disulfides, possible modifications need to be considered
 
                     if mod_ls:
                         mz_mono, neutral_mono, mods, var_mods_dict = modificator(FragmentSiteObj, mod_ls, charge,
-                                                                                 var_mods_dict, mz_mono, neutral_mono)
+                                                                                 var_mods_dict, mz_mono, neutral_mono, modificatorrepo)
 
 
                         # Removing the hydrogens due to the disulfide bonds
@@ -478,7 +521,7 @@ def mass_calc(frag_counter, FragmentSiteObj, ion_types, maxcharge, neutrals = No
                     #If modidications need to be considered
                     if mod_ls:
                         mz_mono, neutral_mono, mods, var_mods_dict = modificator(FragmentSiteObj, mod_ls, charge,
-                                                                                 var_mods_dict, mz_mono, neutral_mono)
+                                                                                 var_mods_dict, mz_mono, neutral_mono, modificatorrepo)
 
                         # except removing the hydrogens due to the disulfide bonds
                         neutral_mono = neutral_mono + sscount * (-1.0078 * 2)
@@ -501,13 +544,12 @@ def mass_calc(frag_counter, FragmentSiteObj, ion_types, maxcharge, neutrals = No
                             mz_mono = mz_mono + (cysmodmass_dict[cys_num][cys_modls] / charge) + (
                                         sscount * ((-1.0078 / charge) * 2))
 
-
             #If there is no disulfides to be considered, but only modifications
             elif mod_ls:
                 mz_mono, neutral_mono, mods, var_mods_dict = modificator(FragmentSiteObj, mod_ls, charge,
-                                                                         var_mods_dict, mz_mono, neutral_mono)
+                                                                         var_mods_dict, mz_mono, neutral_mono, modificatorrepo)
 
-            #If neutrals are to be considered!
+            # If neutrals are to be considered!
             neutloss = ''
             if neutrals == 'NH3':
                 # print("Adding ammonia!")
@@ -515,15 +557,14 @@ def mass_calc(frag_counter, FragmentSiteObj, ion_types, maxcharge, neutrals = No
                 neutral_mono = neutral_mono + -17.02655
                 neutloss += neutrals
 
-
-            elif neutrals =='H2O':
+            elif neutrals == 'H2O':
                 # print("Adding water!")
                 mz_mono = mz_mono  + (-18.01056 / charge)
                 neutral_mono = neutral_mono + -18.01056
                 neutloss += neutrals
 
 
-            #Creating theoretical ion and adding it to the all_sites dict
+            # Creating theoretical ion and adding it to the all_sites dict
             if FragmentSiteObj.term == 'N':
                 #Add correct ion type index based on terminal
                 iontype_num = FragmentSiteObj.endindex
@@ -541,7 +582,7 @@ def mass_calc(frag_counter, FragmentSiteObj, ion_types, maxcharge, neutrals = No
                         for mod in combols:
                             modsplits = mod.split("_")
                             # mass_combo += mods_repo[mod[:-2]].mass * int(mod[-1])
-                            mass_combo += mods_repo[modsplits[0]].mass * int(modsplits[1])
+                            mass_combo += modificatorrepo[modsplits[0]].mass * int(modsplits[1])
                         # print(f"Mass Combo {mass_combo}")
                         mods.append(combols)
                         mz_mono += mass_combo/charge
@@ -586,6 +627,8 @@ def mass_calc(frag_counter, FragmentSiteObj, ion_types, maxcharge, neutrals = No
 
 
             else:
+
+                # C-terminal fragments
                 iontype_num = len(FragmentSiteObj.full_protein_seq) - (FragmentSiteObj.startindex -  1)
 
                 # print(f"For variable mods = {var_mods_dict}")
@@ -600,7 +643,7 @@ def mass_calc(frag_counter, FragmentSiteObj, ion_types, maxcharge, neutrals = No
                         mass_combo = 0
                         for mod in combols:
                             modsplits = mod.split("_")
-                            mass_combo += mods_repo[modsplits[0]].mass * int(modsplits[1])
+                            mass_combo += modificatorrepo[modsplits[0]].mass * int(modsplits[1])
                         # print(f"Mass Combo {mass_combo}")
                         mods.append(combols)
                         mz_mono += mass_combo / charge
@@ -641,7 +684,7 @@ def mass_calc(frag_counter, FragmentSiteObj, ion_types, maxcharge, neutrals = No
     return frag_counter
 
 
-def fragments(analysis_name, sequence, types, maxcharge=1, neutral_bool = None, cystine = None, combo_dict = None, ss_ls = None, intrabroken_ss = None, natredcys = None, modbool = None, noncysmods=None,reverse_seq=None, init_tol=None, final_tol=None, cal_bool=None):
+def fragments(analysis_name, sequence, types, maxcharge=1, neutral_bool = None, cystine = None, combo_dict = None, ss_ls = None, intrabroken_ss = None, natredcys = None, modbool = None, noncysmods=None,reverse_seq=None, init_tol=None, final_tol=None, cal_bool=None, libraryofmods = None):
     """
     Method to produced terminal theoretical ions for a protein sequence!
     :param analysis_name: str, name to id a pass
@@ -692,7 +735,7 @@ def fragments(analysis_name, sequence, types, maxcharge=1, neutral_bool = None, 
             c_site = fragment_processing(c_frag, sequence, 'C',ss_ls, intrabroken_ss, natredcys)
             c_sites[f"C_{len(c_frag)}"] = c_site
 
-    #Append the c_sites here so that the dictionary has the N sites firs, then the C sites
+    #Append the c_sites here so that the dictionary has the N sites first, then the C sites
     all_sites.update(c_sites)
 
     #Go thru each fragment site in the all_sites dictionary and based on the parameters passed for the current pass give this info to the mass_calc function
@@ -717,15 +760,15 @@ def fragments(analysis_name, sequence, types, maxcharge=1, neutral_bool = None, 
                         local_counter = 0
                         counter += mass_calc(local_counter, all_sites[site], ion_types=types, maxcharge=maxcharge,
                                   neutrals=loss, ss_bonds=True, cysmodmass_dict=combo_dict, cys_modls=mods,
-                                  cys_num=unboundcys,
-                                  cysloc=cysloc, sscount=disulfide_counter, mod_ls=noncysmods, reverse_flag=None)
+                                  cys_num=unboundcys, cysloc=cysloc, sscount=disulfide_counter, mod_ls=noncysmods,
+                                             reverse_flag=None, modificatorrepo=libraryofmods)
 
                 else:
                     local_counter = 0
                     counter += mass_calc(local_counter,all_sites[site], ion_types=types, maxcharge=maxcharge,
                               neutrals=neutral_bool, ss_bonds=True, cysmodmass_dict=combo_dict, cys_modls=mods,
-                              cys_num=unboundcys,
-                              cysloc=cysloc, sscount=disulfide_counter, mod_ls=noncysmods, reverse_flag=None)
+                              cys_num=unboundcys, cysloc=cysloc, sscount=disulfide_counter,
+                                         mod_ls=noncysmods, reverse_flag=None, modificatorrepo=libraryofmods)
 
             else:
                 for mods in combo_dict[unboundcys]:
@@ -738,33 +781,33 @@ def fragments(analysis_name, sequence, types, maxcharge=1, neutral_bool = None, 
                             local_counter = 0
                             counter += mass_calc(local_counter,all_sites[site], ion_types=types, maxcharge=maxcharge,
                                       neutrals=loss, ss_bonds=True, cysmodmass_dict=combo_dict, cys_modls=mods,
-                                      cys_num=unboundcys,
-                                      cysloc=cysloc, sscount=disulfide_counter, mod_ls=noncysmods, reverse_flag=None)
+                                      cys_num=unboundcys, cysloc=cysloc, sscount=disulfide_counter, mod_ls=noncysmods,
+                                                  reverse_flag=None, modificatorrepo=libraryofmods)
 
                     else:
                         local_counter = 0
                         counter += mass_calc(local_counter,all_sites[site], ion_types=types, maxcharge=maxcharge,
                                   neutrals=neutral_bool, ss_bonds=True, cysmodmass_dict=combo_dict, cys_modls=mods,
-                                  cys_num=unboundcys,
-                                  cysloc=cysloc, sscount=disulfide_counter, mod_ls=noncysmods, reverse_flag=None)
+                                  cys_num=unboundcys, cysloc=cysloc, sscount=disulfide_counter,
+                                             mod_ls=noncysmods, reverse_flag=None, modificatorrepo=libraryofmods)
 
         #Only considere modifications
         elif modbool:
-            print(f'\nMoodBOOL = {noncysmods}')
+            # print(f'\nMoodBOOL = {noncysmods}')
             if neutral_bool:
                 neutralsLs = ['NH3', 'H2O']
                 for loss in neutralsLs:
                     local_counter = 0
                     counter += mass_calc(local_counter,all_sites[site], ion_types=types, maxcharge=maxcharge,
                               neutrals=loss, ss_bonds=None, cysmodmass_dict=None, cys_modls = None, cys_num=None,
-                              cysloc=None, sscount=None, mod_ls=noncysmods, reverse_flag=None)
+                              cysloc=None, sscount=None, mod_ls=noncysmods, reverse_flag=None, modificatorrepo=libraryofmods)
 
 
 
             else:
                 local_counter = 0
                 counter += mass_calc(local_counter,all_sites[site], ion_types = types, maxcharge= maxcharge, neutrals=neutral_bool,ss_bonds=None, cysmodmass_dict=None, cys_modls = None, cys_num=None,
-                      cysloc=None, sscount=None, mod_ls=noncysmods,reverse_flag=None)
+                      cysloc=None, sscount=None, mod_ls=noncysmods,reverse_flag=None, modificatorrepo=libraryofmods)
 
         #Only do disulfide analysis
         elif cystine:
@@ -781,13 +824,13 @@ def fragments(analysis_name, sequence, types, maxcharge=1, neutral_bool = None, 
                         local_counter = 0
                         counter += mass_calc(local_counter,all_sites[site], ion_types=types, maxcharge=maxcharge,
                                   neutrals=loss, ss_bonds=True, cysmodmass_dict=combo_dict, cys_modls = mods,  cys_num=unboundcys,
-                                  cysloc=cysloc, sscount=disulfide_counter, mod_ls=None, reverse_flag=None)
+                                  cysloc=cysloc, sscount=disulfide_counter, mod_ls=None, reverse_flag=None, modificatorrepo=libraryofmods)
 
                 else:
                     local_counter = 0
                     counter += mass_calc(local_counter,all_sites[site], ion_types=types, maxcharge=maxcharge,
                               neutrals=neutral_bool, ss_bonds=True, cysmodmass_dict=combo_dict, cys_modls = mods, cys_num=unboundcys,
-                              cysloc=cysloc, sscount=disulfide_counter, mod_ls=None, reverse_flag=None)
+                              cysloc=cysloc, sscount=disulfide_counter, mod_ls=None, reverse_flag=None, modificatorrepo=libraryofmods)
 
             else:
                 for mods in combo_dict[unboundcys]:
@@ -799,13 +842,13 @@ def fragments(analysis_name, sequence, types, maxcharge=1, neutral_bool = None, 
                             local_counter = 0
                             counter += mass_calc(local_counter,all_sites[site], ion_types=types, maxcharge=maxcharge,
                                       neutrals=loss, ss_bonds=True, cysmodmass_dict=combo_dict, cys_modls = mods,  cys_num=unboundcys,
-                                      cysloc=cysloc, sscount=disulfide_counter, mod_ls=None, reverse_flag=None)
+                                      cysloc=cysloc, sscount=disulfide_counter, mod_ls=None, reverse_flag=None, modificatorrepo=libraryofmods)
 
                     else:
                         local_counter = 0
                         counter += mass_calc(local_counter,all_sites[site], ion_types=types, maxcharge=maxcharge,
                                   neutrals=neutral_bool, ss_bonds=True, cysmodmass_dict=combo_dict, cys_modls = mods, cys_num=unboundcys,
-                                  cysloc=cysloc, sscount=disulfide_counter, mod_ls=None, reverse_flag=None)
+                                  cysloc=cysloc, sscount=disulfide_counter, mod_ls=None, reverse_flag=None, modificatorrepo=libraryofmods)
 
         #No modification or disulfide bond analysis needed
         else:
@@ -818,18 +861,18 @@ def fragments(analysis_name, sequence, types, maxcharge=1, neutral_bool = None, 
                         local_counter = 0
                         counter += mass_calc(local_counter,all_sites[site], ion_types=types, maxcharge=maxcharge,
                                   neutrals=loss, ss_bonds=None, cysmodmass_dict=None, cys_modls = None, cys_num=None,
-                                  cysloc=None, sscount=None, mod_ls=None, reverse_flag=None)
+                                  cysloc=None, sscount=None, mod_ls=None, reverse_flag=None, modificatorrepo=libraryofmods)
 
 
 
                 else:
                     local_counter = 0
                     counter += mass_calc(local_counter,all_sites[site], ion_types = types, maxcharge= maxcharge, neutrals=neutral_bool,ss_bonds=None, cysmodmass_dict=None, cys_modls = None, cys_num=None,
-                          cysloc=None, sscount=None, mod_ls=None,reverse_flag=None)
+                          cysloc=None, sscount=None, mod_ls=None,reverse_flag=None, modificatorrepo=libraryofmods)
 
 
     all_end = time.time() - all_start
-    print('Total prediction time: {}'.format(all_end))
+    print('Total prediction time: {}'.format(round(all_end,4)))
     print(f'Total theoretical ions {counter}\n')
 
     # for site in all_sites:
@@ -987,10 +1030,10 @@ def print_unmatched(ls_expions, outputpath):
 
     with open(outputpath.strip(".csv") + "_Unmatched" + '.csv', 'w') as outfile:
         # write protein seq and header
-        outfile.write('mz,z\n')
+        outfile.write('mz,z,int\n')
 
         for ion in ls_expions:
-            out_str = f"{ion.mz_mono}, {ion.charge}\n"
+            out_str = f"{ion.mz_mono},{ion.charge},{ion.pkht_cluster}\n"
 
             outfile.write(out_str)
 
@@ -1018,6 +1061,13 @@ def fragments_to_picklefile(file_title, full_proteinseq, fragments_dict):
         pickle.dump(out_tupsaved, picklefile)
 
 def unmatched_expions_outfile_writer(exp_ion_list, output_filename, csv = False):
+    """
+    Writes unmatched ions files. These ions will be used in following passes for search.
+    :param exp_ion_list: ls, experimental ions
+    :param output_filename: str, Name of the file to be written
+    :param csv: file extension, if false an unmatched file will be written
+    :return: void
+    """
     # Test to get the unid exp-ions out and somehow, even if it manually to determine what are the neutral/radicall losses
 
     if csv:
@@ -1033,15 +1083,16 @@ def unmatched_expions_outfile_writer(exp_ion_list, output_filename, csv = False)
         outstr = ""
         output = open(output_filename.strip(".csv") + "_Unmatched" + '.csv', 'w')
         for ion in exp_ion_list:
-            outstr += f"{ion.mz_mono},{ion.charge}\n"
+            outstr += f"{ion.mz_mono},{ion.charge},{ion.pkht_cluster}\n"
 
         output.write(outstr)
         output.close()
     else:
         print_unmatched(exp_ion_list, output_filename)
-        save_fragments(exp_ion_list, output_filename.strip(".csv") + ".unmatched")
+        outnamefile = output_filename.strip(".csv")
+        save_fragments(exp_ion_list, outnamefile + ".unmatched")
 
-def main_batch_multipass(iso=False):
+def main_batch_multipass(main_outdir=None, modificationsrepo=None):
     """
     Main method to run several analysis with several passes for several experimental ion file
     The ions that are matched will not be considered for matching in consecutive passes
@@ -1051,11 +1102,7 @@ def main_batch_multipass(iso=False):
     #set up Tkinter
     root = tkinter.Tk()
     root.withdraw()
-    output_path = ""
 
-    # Takeout .isotopes files from their .raw folders and rename them as their .raw folders
-    if iso:
-        RenameIMTBXoutputs.main()
 
     # load peaklist(s) to search
     # csv files are to expand the type of data inputed into the IMAnnotator (like in dire cases manual peak picked data) - 042120
@@ -1069,17 +1116,6 @@ def main_batch_multipass(iso=False):
     load_ions_bool = messagebox.askyesno('Load Ions File?',
                                          'Do you want to load an existing .ions file (or calculate theoretical ions fresh from a template file)? Choose YES to load .ions file or NO to open a parameter template')
 
-    #
-    # #Load theoretical database parameters - reverse sequences
-    # paramfile_rev = filedialog.askopenfilename(title='Load Reverse Sequence Parameter File',
-    #                                        filetypes=[('CSV', '.csv')])
-    # paramobj_rev_dict = Parameter_Parser.parse_param_template_batch_multipass(paramfile_rev)
-    # print(paramobj_rev_dict)
-
-
-    #Where to save results
-    main_outdir = filedialog.askdirectory(title='Choose Output Folder')
-    os.chdir(main_outdir)
 
     # A dict of analysis. Each one has a list of passes
     analysis_dict = {}
@@ -1108,24 +1144,61 @@ def main_batch_multipass(iso=False):
 
             #A dictionary of passes per analysis
             passes_dict = {}
+            # for paramobj in paramobj_dict[analysis]:
+            #     print(f"PassName = {paramobj.analysisName}")
+            #
+            #     print("~~~~~~Fragmentation starts~~~~~~")
+            #     # It returns a tuple with the analysis name in first position then the sites_dict
+            #     # in the second post, and in the third, fourth, and fifth position parameters for mass calibration
+            #     theoretical_database = fragments(analysis_name=paramobj.analysisName, sequence=paramobj.seq, types=paramobj.iontypes,
+            #                            maxcharge=paramobj.maxcharge,
+            #                           neutral_bool=paramobj.neutraloss_bool,
+            #                           cystine=paramobj.disulfide_bool,
+            #                            combo_dict=paramobj.combodict_calc(),
+            #                           ss_ls=paramobj.disulfide_ls,
+            #                           intrabroken_ss=paramobj.ss_allowbroken,
+            #                           natredcys=paramobj.naturally_redcys,
+            #                           modbool=paramobj.mod_bool,
+            #                           noncysmods=paramobj.noncysmods,
+            #                           reverse_seq=False, init_tol=paramobj.init_tol, final_tol=paramobj.final_tol, cal_bool=paramobj.cal_bool )
+            #     passes_dict[paramobj.analysisName] = theoretical_database
+            #
+            # #Add theoretical_database to the passes_dict
+            # analysis_dict[analysis] = passes_dict
+
+
             for paramobj in paramobj_dict[analysis]:
                 print(f"PassName = {paramobj.analysisName}")
 
                 print("~~~~~~Fragmentation starts~~~~~~")
+                pool = multiprocessing.Pool(processes=10)
+                # results = []
+                argslist = [paramobj.analysisName,paramobj.seq,paramobj.iontypes,paramobj.maxcharge,paramobj.neutraloss_bool,paramobj.disulfide_bool,paramobj.combodict_calc(),
+                            paramobj.disulfide_ls,paramobj.ss_allowbroken,paramobj.naturally_redcys,paramobj.mod_bool,paramobj.noncysmods,False,paramobj.init_tol,paramobj.final_tol,paramobj.cal_bool,
+                            modificationsrepo]
+
+                pool_result = pool.apply_async(fragments, args=argslist)
+                # results.append(pool_result)
+
+                pool.close()  # tell the pool we don't need it to process any more data
+
+                passes_dict[paramobj.analysisName] = pool_result.get()
+
+
                 # It returns a tuple with the analysis name in first position then the sites_dict
                 # in the second post, and in the third, fourth, and fifth position parameters for mass calibration
-                theoretical_database = fragments(analysis_name=paramobj.analysisName, sequence=paramobj.seq, types=paramobj.iontypes,
-                                       maxcharge=paramobj.maxcharge,
-                                      neutral_bool=paramobj.neutraloss_bool,
-                                      cystine=paramobj.disulfide_bool,
-                                       combo_dict=paramobj.combodict_calc(),
-                                      ss_ls=paramobj.disulfide_ls,
-                                      intrabroken_ss=paramobj.ss_allowbroken,
-                                      natredcys=paramobj.naturally_redcys,
-                                      modbool=paramobj.mod_bool,
-                                      noncysmods=paramobj.noncysmods,
-                                      reverse_seq=False, init_tol=paramobj.init_tol, final_tol=paramobj.final_tol, cal_bool=paramobj.cal_bool )
-                passes_dict[paramobj.analysisName] = theoretical_database
+                # theoretical_database = fragments(analysis_name=paramobj.analysisName, sequence=paramobj.seq, types=paramobj.iontypes,
+                #                        maxcharge=paramobj.maxcharge,
+                #                       neutral_bool=paramobj.neutraloss_bool,
+                #                       cystine=paramobj.disulfide_bool,
+                #                        combo_dict=paramobj.combodict_calc(),
+                #                       ss_ls=paramobj.disulfide_ls,
+                #                       intrabroken_ss=paramobj.ss_allowbroken,
+                #                       natredcys=paramobj.naturally_redcys,
+                #                       modbool=paramobj.mod_bool,
+                #                       noncysmods=paramobj.noncysmods,
+                #                       reverse_seq=False, init_tol=paramobj.init_tol, final_tol=paramobj.final_tol, cal_bool=paramobj.cal_bool )
+
 
             #Add theoretical_database to the passes_dict
             analysis_dict[analysis] = passes_dict
@@ -1138,20 +1211,6 @@ def main_batch_multipass(iso=False):
 
         # fragments_to_FRAGSfile(f"{analysis}", str(analysis_dict))
     #
-    # print(f'analysis_dict = {analysis_dict}')
-           # for x in analysis_dict:
-    #     print(f"x in analysis_dict = {x}")
-    #     print(f"analysis_dict[x] = {analysis_dict[x]}")
-    #     for foo in analysis_dict[x]:
-    #         print(f"foo {foo}")
-    #         print(f"analysis_dict[x][foo] {analysis_dict[x][foo]}")
-    #         print(f"Sites_dict {analysis_dict[x][foo][1]}")
-    #         for site in analysis_dict[x][foo][1]:
-    #             print(f"Site {analysis_dict[x][foo][1][site]}")
-    #             for ion in analysis_dict[x][foo][1][site].theo_ions:
-    #                 print(analysis_dict[x][foo][1][site].theo_ions[ion])
-
-
     output_path = main_outdir
     # Search peaklists with parameters
     for file_index, exp_file in enumerate(exp_files):
@@ -1218,46 +1277,17 @@ def main_batch_multipass(iso=False):
             print_hits(protein_seq, results_ls, output_filename)
             save_fragments(results_ls, output_filename.rstrip('_hits.csv') + '.hits')
 
-    # print(files_dict)
-    # print(len(files_dict))
-    #
-    #
-    #
-    # print("Calculating Reverse Sequence Theoretical Fragments")
-    # # A dict of analysis. Each one hasdictionary of passes
-    # analysis_dict_rev = {}
-    # for rev_analysis in paramobj_rev_dict:
-    #     print(f"Current Analysis for Reverse Sequences = {rev_analysis} of {len(paramobj_dict)}")
-    #     passes_rev_dict = {}
-    #     for paramobj_rev in paramobj_rev_dict[rev_analysis]:
-    #         print(f"PassName = {paramobj_rev.analysisName}")
-    #
-    #         #It actually returns a tuple with the analysis name in first position then the fragments dictionary
-    #         frag_dict_rev = ifragments(analysis_name= paramobj_rev.analysisName, sequence=paramobj_rev.seq, types=paramobj_rev.iontypes, mincharge=paramobj_rev.mincharge,
-    #                                maxcharge=paramobj_rev.maxcharge, maxstart=paramobj_rev.min_len,
-    #                                maxlength=paramobj_rev.max_len,
-    #                                modbool=paramobj_rev.noncysmods, max_mods=0, combo_dict=paramobj_rev.combodict_calc(),
-    #                                cystine=paramobj_rev.disulfide_bool, uniprot_offset=paramobj_rev.uniprot_offset,
-    #                                allow_ssbroken=paramobj_rev.ss_allowbroken, reverse_seq=True,
-    #                                foo_ls=paramobj_rev.disulfide_ls)
-    #
-    #         passes_rev_dict[paramobj_rev.analysisName] = frag_dict_rev
-    #
-    #     #Analsis dictionary with passes dictionaries as values
-    #     analysis_dict_rev[rev_analysis] = passes_rev_dict
-    #     os.chdir(main_outdir + f"/{rev_analysis}")
-    #     # Create pickle file
-    #     fragments_to_picklefile(f"{rev_analysis}_Reverse", analysis_dict_rev)
-    #
-    # # print(f'analysis_dict_rev = {analysis_dict_rev}')
 
-    #
-    #
 if __name__ == '__main__':
     # print( f"z-dot = {mass.Composition(formula='H-2O-1' + 'ON-1H-1')}  'z'= {mass.Composition(formula='H-2O-1' + 'ON-1')}")
     # print(f"c-zdot = {mass.Composition(formula='H-2O-1' + 'NH3'+'H-2O-1' + 'ON-1H-1')} ")
     # print(f"c-z = {mass.Composition(formula='H-2O-1' + 'NH3'+'H-2O-1' + 'ON-1')} ")
-    # print(f"c-y = {mass.Composition(formula='H-2O-1' + 'NH3'+ '')}")
-    main_batch_multipass(iso=False)
+    # # print(f"c-y = {mass.Composition(formula='H-2O-1' + 'NH3'+ '')}")
+    # print(f"a-z = {mass.Composition(formula='H-2O-1' + 'C-1O-1'+'H-2O-1' + 'ON-1')}")
+    # print(f"a-zdot = {mass.Composition(formula='H-2O-1' + 'C-1O-1' + 'H-2O-1' + 'ON-1H-1')}")
+    # print(f"'a-y':{mass.Composition(formula='H-2O-1' + 'C-1O-1' + '')}")
+    # print(f"'b-y':{mass.Composition(formula='H-2O-1' + '')}")
+
+    main_batch_multipass()
 
 

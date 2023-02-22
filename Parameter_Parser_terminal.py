@@ -30,7 +30,7 @@ ppos = {'Analysis Num':0,
         }
 
 
-TERMIONS = ['c', 'c-dot', 'z', 'z-dot', 'x', 'a', 'a+1', 'b', 'y']
+TERMIONS = ['c', 'c-dot', 'z', 'z-dot', 'x', 'a', 'b', 'y']
 
 
 def parse_disulf_ls(disulf_str, uniprot_offset):
@@ -338,13 +338,18 @@ class ExpIon:
         # print(hash(str(self)))
         return hash(self.mz_mono)
 
+    def __round__(self, n=2):
+
+        return round(self.mz_mono,n)
+
+
 
     def __str__(self):
         """
         string representation
         :return: string
         """
-        return f'<Exp> mz: {self.mz_mono}, z: {self.charge}'
+        return f'<Exp> mz: {self.mz_mono}, z: {self.charge}, int: {self.pkht_cluster}'
     __repr__ = __str__
 
 def load_hits_file(filename):
@@ -515,6 +520,7 @@ def parse_single_exp_mmass_zcheck(input_file):
                 # this is a header line, continue to the next line
                 continue
             # re-organize arg list to match expected input format
+
             ordered_list = [arg_list[2], arg_list[5], '', '', arg_list[3], '', '']
 
             # create a new exp cluster object using the input data from this line and append it to the peak_list
@@ -551,13 +557,12 @@ def csvfile_parser(csv_file):
                 # this is a header line, continue to the next line
                 continue
 
-
+            # print(arg_list)
             # re-organize arg list to match expected input format
-            #0 = mz, 1 = z, 2 = int
-            ordered_list = [arg_list[0], '', arg_list[2], arg_list[2], arg_list[1], arg_list[2], arg_list[2]]
+            ordered_list = [arg_list[0], arg_list[2], "", "", arg_list[1], "", ""]
 
             # create a new exp cluster object using the input data from this line and append it to the peak_list
-            peak = ExpIon(ordered_list, mmass_bool=True)
+            peak = ExpIon(ordered_list, True)
 
             peak_list.append(peak)
 

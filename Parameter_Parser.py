@@ -9,7 +9,7 @@ from tkinter import filedialog
 from tkinter import simpledialog
 import tkinter as tk
 import os
-import pyperclip
+# import pyperclip
 import pickle
 import combination
 import re
@@ -42,7 +42,7 @@ ppos = {'Analysis Num':0,
         }
 
 
-INTERIONS = ['c-z', 'c-zdot', 'c-y', 'cdot-y', 'a-z', 'a-zdot']
+INTERIONS = ['c-z', 'c-zdot', 'c-y', 'cdot-y', 'a-z', 'a-zdot', 'a-y', 'b-y', 'x-c', 'x-cdot']
 
 def parse_disulf_ls(disulf_str):
     """
@@ -236,8 +236,8 @@ def parse_param_template_batch_multipass(param_file, terminal=None):
                 continue
 
             splits = line.rstrip('\n').split(',')
-            print(splits)
-            print(len(splits))
+            # print(splits)
+            # print(len(splits))
 
 
             current_analysis = splits[ppos['Analysis Num']]
@@ -274,7 +274,7 @@ def parse_param_template_batch_multipass(param_file, terminal=None):
             # Parameteres for modification permutations for disulfide breakage
             modstr = splits[ppos['mods_array']]
             params.arr = mods_fromstr_tols(modstr)
-            print(f"params.arr= {params.arr}")
+            # print(f"params.arr= {params.arr}")
             modstr = splits[ppos['noncys_mods']]
             params.noncysmods = mods_fromstr_tols(modstr)
             params.r = splits[ppos['r']]
@@ -410,8 +410,8 @@ def isotope_xtractor():
     os.chdir(main_outdir)
 
     # Input experimental ions unmatched by the terminal fragmentor
-    expions = filedialog.askopenfilenames(title='expions to find', filetypes=[('CSV', '_Unmatched.csv')])
-    # print(expions)
+    expions = filedialog.askopenfilenames(title='expions to find', filetypes=[('CSV', '.csv')])
+    print(expions)
 
     for expfile in expions:
 
@@ -434,6 +434,7 @@ def isotope_xtractor():
             print(ion_info[0], ion_info[1])
             expion_dict[ion_info[0]] = []
             expion_dict[ion_info[0]].append(ion_info[1])
+            expion_dict[ion_info[0]].append(ion_info[2])
 
         print(expion_dict)
 
@@ -445,10 +446,10 @@ def isotope_xtractor():
             pathsplit = file.split('/')
             # proteiname = pathsplit[-1].strip("_expions.csv")
             coorname = pathsplit[-1]
-            print(coorname)
+            # print(coorname)
 
             # Extracting the csv as a pandas DataFrame
-            pd_file = pd.read_csv(file, header=1, engine='python', usecols=['X(MassToCharge)', 'Y(Counts)'])
+            pd_file = pd.read_csv(file, header=0, engine='python', usecols=['X(MassToCharge)', 'Y(Counts)'])
             # pd_mz = pd_file['X(MassToCharge)']
             # pd_int = pd_file['Y(Counts)']
 
@@ -457,7 +458,7 @@ def isotope_xtractor():
                 round_peak = round(peak, 4)
 
                 # What is the minimun mz value
-                rndone_mzrange = pd_file.loc[pd_file['X(MassToCharge)'] > round_peak - 0.75]
+                rndone_mzrange = pd_file.loc[pd_file['X(MassToCharge)'] > round_peak - 0.5]
                 # print(rndone_mzrange)
                 # print(type(rndone_mzrange))
 
@@ -479,28 +480,29 @@ def isotope_xtractor():
                 # Add to dictionary
                 expion_dict[peak].append((mz_output, int_output))
 
-            print(expion_dict)
+            # print(expion_dict)
 
             # parse each peak as a list in a list to create the output DataFrame
             final_df_ls = []
             for val in expion_dict:
+                int = expion_dict[val][1]
                 z_val = expion_dict[val][0]
                 mz_val = val
                 # Calculate neutral mass
                 neut_val = (mz_val * z_val) - (z_val * 1.0078)
-                mz_ls = expion_dict[val][1][0]
-                int_ls = expion_dict[val][1][1]
-                final_df_ls.append([neut_val, z_val, mz_val, mz_ls, int_ls])
-            print(final_df_ls)
+                mz_ls = expion_dict[val][2][0]
+                int_ls = expion_dict[val][2][1]
+                final_df_ls.append([neut_val, z_val, mz_val, int, mz_ls, int_ls])
+            # print(final_df_ls)
 
             # Create Output DataFrame
             final_df = pd.DataFrame(final_df_ls,
-                                    columns=['#neut', 'z', 'mz', 'isoenv_mz', 'isoenv_int'])
+                                    columns=['#neut', 'z', 'mz', 'int','isoenv_mz', 'isoenv_int'])
 
             print(final_df)
 
             # Convert FataFrame to .csv
-            final_df.to_csv(f"{samplename}_isoenv.csv", index=False)
+            final_df.to_csv(f"{samplename}_expion_isoenv.csv", index=False)
 
 
 class expionObj:
@@ -513,10 +515,11 @@ class expionObj:
     :param int_isoenv: list with intensity values covering the isotopic envelope of the experimental ion
 
     """
-    def __init__(self, exp_neut, exp_mz, charge, mz_isoenv, int_isoenv):
+    def __init__(self, exp_neut, exp_mz, charge, pkht_cluster, mz_isoenv, int_isoenv):
         self.exp_neut = round(exp_neut, 4)
         self.exp_mz = round(exp_mz,4)
-        self.charge = int(charge)
+        self.charge = float(charge)
+        self.pkht_cluster = pkht_cluster
         self.mz_isoenv = mz_isoenv
         self.int_isoenv = int_isoenv
 
@@ -527,19 +530,17 @@ class expionObj:
 
 
 
-def expion_parser():
+def expion_parser(expfile):
     """
     Function to parse a .csv file with the experimental neutral masses
     :return: a list of experimental ion objects
     """
     expion_ls = []
-
-    expfiles = filedialog.askopenfilename(title='Load Experimental masses', filetypes=[('CSV', '.csv')])
-    pathsplit = expfiles.split('/')
+    pathsplit = expfile.split('/')
     proteiname = pathsplit[-1].strip("_expions.csv")
 
 
-    with open(expfiles, 'r') as batch:
+    with open(expfile, 'r') as batch:
         lines = list(batch)
 
         for line in lines:
@@ -554,17 +555,18 @@ def expion_parser():
                 splits = line.split(',')
                 if splits[0]:
                     neutral_mono = float(splits[0])
-                    z = float(splits[1])
+                    z = splits[1]
                     mz = float(splits[2])
+                    int = float(splits[3])
 
-                    mz_isoenv = splits[3]
+                    mz_isoenv = splits[4]
                     if mz_isoenv:
                         mz_isoenv_spl = mz_isoenv.split(';')
                         for  mz_val in mz_isoenv_spl:
 
                             mz_isoenv_ls.append(float(mz_val))
 
-                    int_isoenv = splits[4]
+                    int_isoenv = splits[5]
                     if int_isoenv:
                         int_isoenv_spl = int_isoenv.split(';')
                         for int_val in int_isoenv_spl:
@@ -572,7 +574,7 @@ def expion_parser():
 
                 # print(mz_isoenv_ls)
                 # print(int_isoenv_ls)
-                expion = expionObj(neutral_mono, mz, z, mz_isoenv_ls,int_isoenv_ls)
+                expion = expionObj(neutral_mono, mz, z, int, mz_isoenv_ls,int_isoenv_ls)
                 expion_ls.append(expion)
 
 

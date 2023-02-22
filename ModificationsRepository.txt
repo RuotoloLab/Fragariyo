@@ -1,0 +1,3 @@
+#Pyteomics ModX name	Printout Mod name	Target Residue	Mass Change	"If fixed, which position?"	Maximun number of modifications	"If terminal, which one?"	Chemical Composition
+acetyl	acetyl	A	42.01056	1	1	N	"C:2,H:2,O:1"
+trimethyl	trimethyl	K	42.04695	115	1		"C:3,H:6,O:0"

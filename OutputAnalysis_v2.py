@@ -4,6 +4,7 @@ Module for analysis/comparison/etc of hits files.
 #date: 8/14/2018
 Updated 06/01/20 to analyze output from Annotatorv3
 """
+import pandas as pd
 import tkinter
 from tkinter import filedialog
 import pickle
@@ -16,8 +17,11 @@ from terminalFragmentor_Main import FragmentSite
 from terminalFragmentor_Main import print_hits
 #Not directyy used by the module, but used by FragmentSite
 from terminalFragmentor_Main import ThyIon
+
 from Parameter_Parser_terminal import load_hits_file
 from terminalFragmentor_Main import save_fragments
+import re
+import pygubu
 
 
 
@@ -372,10 +376,12 @@ def average_main(batch = False):
         # print(output_title)
 
         for file_set in files_list:
-            outdir = file_set[0]
-            output_title = file_set[1]
-            files = file_set[2:]
-            averaging_files(files, outdir, output_title)
+            if file_set:
+                print(f"file_set = {file_set}")
+                outdir = file_set[0]
+                output_title = file_set[1]
+                files = file_set[2:]
+                averaging_files(files, outdir, output_title)
 
     else:
         hitsfiles = filedialog.askopenfilenames(title='Load Hits Files', filetypes=[('Hits', '.hits')])
@@ -400,7 +406,7 @@ def main_seq_cov(files, outputdir, extension='.png', iontype_exclusion=False, er
     # It gets too confusing. Modified to code so the user can choose the output directory
     # outputdir = filedialog.askdirectory(title='Choose Output Folder')
 
-    output_header = 'Sample name, seq_cov, max_int\n'
+    output_header = 'Sample name, seq_cov, max_int, N_Sites, C_Sites\n'
     output_str = f"{output_header}"
 
 
@@ -413,12 +419,16 @@ def main_seq_cov(files, outputdir, extension='.png', iontype_exclusion=False, er
         csv_filepath = os.path.join(outputdir, output_filename + '_analysis.csv')
 
         # Compute sequence coverage percentage, need to set seqcovnum argument in general_seq_plot
-        seqcovnum = str(seq_cov_number(protein_seq, sitelist))
+        seqcovnum, Nindxs, Cindxs, totalsitesnum = seq_cov_number(protein_seq, sitelist)
 
         # Compute sequence coverage and plot/write to file
         n_ints, c_ints, max_int = compute_seq_cov(protein_seq, sitelist,  norm = False, iontype_exclusion=iontype_exclusion, cz_iontypes_only=cz_iontypes_only)
 
-        output_str += f"{output_filename},{seqcovnum}, {round(max_int)}\n"
+        #Get list of indeces ready for .csv
+        n_sites = ';'.join(map(str, Nindxs))
+        c_sites = ';'.join(map(str, Cindxs))
+
+        output_str += f"{output_filename},{seqcovnum}, {round(max_int)}, {n_sites}, {c_sites}, {totalsitesnum}\n"
 
         # Plots sequence position vs normalized intensity of sites covered
         general_seq_plot([n_ints, c_ints], ['n', 'c'], outputdir, plotitle=output_filename, seqcovnumber=seqcovnum, xtitle='Sequence position',
@@ -442,7 +452,7 @@ def main_seq_cov(files, outputdir, extension='.png', iontype_exclusion=False, er
             output = open("Sequence_cov" + outfile_extension, 'w')
             output.write(output_str)
             output.close()
-        print(output_str)
+        # print(output_str)
 
 
 def seq_cov_overlay(list_hits_files, norm_bool):
@@ -898,11 +908,11 @@ def compute_seq_cov_iontype(protein_seq, site_list, norm =False):
 
             for hit in site.hits:
                 # to no considering neutral losses don't index at 0
-                if hit.thy_ion.iontype[0] == 'x':
+                if hit.thy_ion.ion_type[0] == 'x':
                     x_int += float(hit.exp_ion.pkar_cluster)
-                elif hit.thy_ion.iontype[0] == 'y':
+                elif hit.thy_ion.ion_type[0] == 'y':
                     y_int += float(hit.exp_ion.pkar_cluster)
-                elif hit.thy_ion.iontype[0] == 'z':
+                elif hit.thy_ion.ion_type[0] == 'z':
                     z_int += float(hit.exp_ion.pkar_cluster)
                 else:
                     print('INVALID ION-TYPE! Ion-type was {}'.format(hit.thy_ion.iontype))
@@ -928,11 +938,11 @@ def compute_seq_cov_iontype(protein_seq, site_list, norm =False):
             c_int = 0
             # check for a and b fragments and compare cluster total areas
             for hit in site.hits:
-                if hit.thy_ion.iontype[0] == 'a':
+                if hit.thy_ion.ion_type[0] == 'a':
                     a_int += float(hit.exp_ion.pkar_cluster)
-                elif hit.thy_ion.iontype[0] == 'b':
+                elif hit.thy_ion.ion_type[0] == 'b':
                     b_int += float(hit.exp_ion.pkar_cluster)
-                elif hit.thy_ion.iontype[0] == 'c':
+                elif hit.thy_ion.ion_type[0] == 'c':
                     c_int += float(hit.exp_ion.pkar_cluster)
                 else:
                     print('INVALID ION-TYPE! Ion-type was {}'.format(hit.thy_ion.iontype))
@@ -1243,16 +1253,16 @@ def seq_cov_number(protein_seq, site_list, iontype_exclusion=False):
         if site.term == 'N' and len(site.hits) != 0:
 
             if site.hits == 1:
-                print(site.hits)
+                # print(site.hits)
                 for x in site.hits:
-                    print(f"x cal_error = {x.cal_error}")
+                    # print(f"x cal_error = {x.cal_error}")
                     if x.thy_ion.iontype in bad_iontypes:
                         continue
                     else:
                         seqindexListN.append(site.seq_index)
                         hitcount += 1
             else:
-                print(f"Not == 1 {site.hits}")
+                # print(f"Not == 1 {site.hits}")
 
                 seqindexListN.append(site.seq_index)
                 hitcount += 1
@@ -1260,26 +1270,30 @@ def seq_cov_number(protein_seq, site_list, iontype_exclusion=False):
 
         if site.term == "C" and len(site.hits) != 0:
             if site.hits == 1:
-                print(site.hits)
+                # print(site.hits)
                 for x in site.hits:
-                    print(f"x cal_error = {x.cal_error}")
+                    # print(f"x cal_error = {x.cal_error}")
                     if x.thy_ion.iontype in bad_iontypes:
                         continue
                     else:
                         seqindexListC.append(site.seq_index)
                         hitcount += 1
             else:
-                print(f"Not == 1 {site.hits}")
+                # print(f"Not == 1 {site.hits}")
                 seqindexListC.append(site.seq_index)
                 hitcount += 1
             #Removing if the hit correspond to an index already covered by n-term fragments
             if site.seq_index in seqindexListN:
                 hitcount -=1
 
+    print(f"Terminal N indeces: {seqindexListN}")
+    print(f"Terminal C indeces: {seqindexListC}")
+
     # sequence coverage percentage is calculated
     # Number of Fragsites over number of peptide bonds in a protein
+    total_sites_count = len(protein_seq) - 1
     seqcov = (hitcount / (len(protein_seq) - 1))*100
-    return round(seqcov)
+    return round(seqcov), seqindexListN, seqindexListC, total_sites_count
 
 
 def get_max_int(sitelist):
@@ -1292,11 +1306,17 @@ def get_max_int(sitelist):
     for site in sitelist:
         site_total = 0
         for hit in site.hits:
+
             try:
+                # print(hit.exp_ion)
+                # print(f"hit.exp_ion.pkar_cluster = {type(hit.exp_ion.pkar_cluster)}")
                 site_total += float(hit.exp_ion.pkar_cluster)
             except AttributeError:
                 # mmass data - use peak height
                 site_total += float(hit.exp_ion.pkht_cluster)
+            except ValueError:
+                site_total += float(hit.exp_ion.pkht_mono)
+
         if site_total > max_int:
             max_int = site_total
     return max_int
@@ -1385,8 +1405,187 @@ def batch_main_seq_cov():
         files = [os.path.join(batch_folder, x) for x in os.listdir(batch_folder) if x.endswith('.hits')]
         main_seq_cov(files)
 
+def terminal_stats(files, outputdir):
+    """
+    :param protein_seq: protein amino acid sequence string
+    :param site_list: list of FragmtSite objects containing hit information
+    :return: percent of sequence coverage, number of fragsites/number of peptidebonds*100. It automatically filters extra ion types
+    """
+    output_header = 'Sample name, Nterminal fragments quantity, Average Lenght Nterminal frags, std. dev.,Cterminal fragments quantity, Average Lenght Cterminal frags, std. dev.\n'
+    output_str = f"{output_header}"
 
-def frips_main_seq_cov(hits_files, seqcov=False, seqcov_iontype=False, overlay=False, combination=False):
+    for index, hits_file in enumerate(files):
+        print('analyzing file {} of {}'.format(index + 1, len(files)))
+        site_list = load_hits_file(hits_file)
+        protein_seq = get_protein_seq(site_list)
+
+        output_filename = os.path.basename(hits_file).rstrip('.hits')
+        csv_filepath = os.path.join(outputdir, output_filename + '_termanalysis.csv')
+        #Creating list to store the seq_index of each hit
+        lenListC = []
+        lenListN= []
+
+        for site in site_list:
+
+            # For n-terminal fragments: If the Fragsite has at least one hit, it is added to the hit counter, also its
+            #seq_index is added so that the hits from the c-term that were already covered by a n-term-fragment are not added
+            if site.term == 'N' and len(site.hits) != 0:
+                # print(f" N site hits = {site.hits}")
+                for x in site.hits:
+                    # print(f"x cal_error = {x.cal_error}")
+                    # print(f"seq = {x.thy_ion.sequence}")
+                    lenListN.append(len(x.thy_ion.sequence))
+
+            if site.term == "C" and len(site.hits) != 0:
+                for x in site.hits:
+                    # print(f"x cal_error = {x.thy_ion.sequence}")
+                    # print(f"seq = {x.thy_ion.sequence}")
+                    lenListC.append(len(x.thy_ion.sequence))
+
+        Nfragnum = len(lenListN)
+        Cfragnum = len(lenListC)
+
+        if Nfragnum > 0 :
+            arrayN = np.array(lenListN)
+        else:
+            arrayN = [0]
+
+        if Cfragnum > 0 :
+            arrayC = np.array(lenListC)
+        else:
+            arrayC = 0
+
+
+        try:
+            avglenN = np.mean(arrayN)
+            avglenC = np.mean(arrayC)
+        except ValueError:
+            avglenC = 0
+            avglenN = 0
+
+        try:
+            stdevlenN = np.std(arrayN)
+            stdevlenC = np.std(arrayC)
+        except ValueError:
+            stdevlenC = 0
+            stdevlenN = 0
+
+        output_str += f"{output_filename},{Nfragnum},{round(int(avglenN))},{round(int(stdevlenN))},{Cfragnum},{round(int(avglenC))},{round(int(stdevlenC))}\n"
+
+    output = open("terminalstats.csv", 'w')
+    output.write(output_str)
+    output.close()
+
+    print(output_str)
+
+def intensity_tracking(files, outputdir):
+    """
+    Create plots to track intensity of peaks across several files
+    :param site_list: list of FragmtSite objects containing hit information
+    :return: percent of sequence coverage, number of fragsites/number of peptidebonds*100. It automatically filters extra ion types
+    """
+    output_header = ',mz_mono, intensities\n'
+    output_str = f"{output_header}"
+
+    Cdict = {}
+    Ndict = {}
+    for index, hits_file in enumerate(files):
+        print(os.path.basename(hits_file))
+        print('analyzing file {} of {}'.format(index + 1, len(files)))
+        site_list = load_hits_file(hits_file)
+        protein_seq = get_protein_seq(site_list)
+
+        output_filename = os.path.basename(hits_file).rstrip('.hits')
+        csv_filepath = os.path.join(outputdir, output_filename + '_intanalysis.csv')
+        #Creating list to store the seq_index of each hit
+
+
+        for site in site_list:
+
+            # For n-terminal fragments: If the Fragsite has at least one hit, it is added to the hit counter, also its
+            #seq_index is added so that the hits from the c-term that were already covered by a n-term-fragment are not added
+            if site.term == 'N' and len(site.hits) != 0:
+                # print(f" N site hits = {site.hits}")
+                if site.get_seq_index(len(protein_seq)) in Ndict:
+                    sitedictN = Ndict[site.get_seq_index(len(protein_seq))]
+                else:
+                    Ndict[site.get_seq_index(len(protein_seq))] = {}
+                    sitedictN = Ndict[site.get_seq_index(len(protein_seq))]
+                for hit in site.hits:
+                    # if hit.thy_ion.mz_mono in Ndict:
+                    #     Ndict[hit.thy_ion.mz_mono].append(hit.exp_ion.pkar_cluster)
+                    # else:
+                    #     Ndict[hit.thy_ion.mz_mono] = [hit.exp_ion.pkar_cluster]
+                    if hit.thy_ion.mz_mono in sitedictN:
+                        sitedictN[hit.thy_ion.mz_mono][index + 1] = hit.exp_ion.pkar_cluster
+                    else:
+                        sitedictN[hit.thy_ion.mz_mono] = {}
+                        for i in range(1,index + 1):
+                            # print(i)
+                            sitedictN[hit.thy_ion.mz_mono][i] = 0
+                        sitedictN[hit.thy_ion.mz_mono][index + 1] = hit.exp_ion.pkar_cluster
+
+
+            if site.term == "C" and len(site.hits) != 0:
+                if site.get_seq_index(len(protein_seq)) in Cdict:
+                    sitedictC = Cdict[site.get_seq_index(len(protein_seq))]
+                else:
+                    Cdict[site.get_seq_index(len(protein_seq))] = {}
+                    sitedictC = Cdict[site.get_seq_index(len(protein_seq))]
+                for hit in site.hits:
+                    if hit.thy_ion.mz_mono in sitedictC:
+                        sitedictC[hit.thy_ion.mz_mono][index + 1] = hit.exp_ion.pkar_cluster
+                    else:
+                        sitedictC[hit.thy_ion.mz_mono] = {}
+                        for i in range(1,index + 1):
+                            # print(i)
+                            sitedictC[hit.thy_ion.mz_mono][i] = 0
+                        sitedictC[hit.thy_ion.mz_mono][index + 1] = hit.exp_ion.pkar_cluster
+
+    # print(Ndict)
+    # print(Cdict)
+
+    # output_str += f"NTerm\n"
+    # for site in Ndict:
+    #     output_str += f"\n{site},"
+    #     for hit in Ndict[site]:
+    #         output_str += f"{hit},"
+    #         for feature in Ndict[site][hit]:
+    #             output_str += f"{Ndict[site][hit][feature]},"
+    #
+    #
+    # output_str += f"\nCTerm\n"
+    # for site in Cdict:
+    #     output_str += f"\n{site},"
+    #     for hit in Cdict[site]:
+    #         output_str += f"{hit},"
+    #         for feature in Cdict[site][hit]:
+    #             output_str += f"{Cdict[site][hit][feature]},"
+
+    output_str += f"NTerm\n"
+    for site in Ndict:
+        # output_str += f"\n{site},"
+        for hit in Ndict[site]:
+            output_str += f"\n{site},{hit},"
+            for feature in Ndict[site][hit]:
+                output_str += f"{Ndict[site][hit][feature]},"
+
+
+    output_str += f"\nCTerm\n"
+    for site in Cdict:
+        # output_str += f"\n{site},"
+        for hit in Cdict[site]:
+            output_str += f"\n{site},{hit},"
+            for feature in Cdict[site][hit]:
+                output_str += f"{Cdict[site][hit][feature]},"
+
+    output = open(f"{os.path.basename(files[0])}_term_ints.csv", 'w')
+    output.write(output_str)
+    output.close()
+
+    # print(output_str)
+
+def frips_main_seq_cov(hits_files, seqcov=False, seqcov_iontype=False, overlay=False, combination=False, termi_frags_stats = None, intenanalysis =None):
     """
     Function created specifically for my FRIPS datasets sequence coverage analysis - CRR
     :param hits_files: (list of strings) full system paths to .hits files to analyze
@@ -1402,7 +1601,7 @@ def frips_main_seq_cov(hits_files, seqcov=False, seqcov_iontype=False, overlay=F
     os.chdir(outdir)
 
     if seqcov:
-        main_seq_cov(hits_files, outputdir = outdir, extension=".pdf",  iontype_exclusion=False, cz_iontypes_only=False, errors=True, outfile=True, outfile_extension=".csv")
+        main_seq_cov(hits_files, outputdir = outdir, extension=".png",  iontype_exclusion=False, cz_iontypes_only=False, errors=True, outfile=True, outfile_extension=".csv")
         print("Done!")
     else:
 
@@ -1412,34 +1611,480 @@ def frips_main_seq_cov(hits_files, seqcov=False, seqcov_iontype=False, overlay=F
             main_seq_cov_overlayn(hits_files, outdir)
             main_seq_cov_overlayc(hits_files, outdir)
         elif combination:
-
             main_seq_cov_combo(hits_files, outdir)
+        elif termi_frags_stats:
+            terminal_stats(hits_files, outdir)
+        elif intenanalysis:
+            intensity_tracking(hits_files,outdir)
+
+
+def ClipsMS_FragmentorPipe(files, outputdir):
+    """
+    Run sequence coverage analysis on the provided list of .hits files
+    :param files: (list of strings) full system paths to .hits files to analyze
+    :param extension: output plot extension (e.g. '.png)
+    :return: void
+    """
+    # outputdir = filedialog.askdirectory(title='Choose Output Folder')
+    os.chdir(outputdir)
+
+    #Zero in the meantime
+    uniprot_offset = 0
+
+    for index, hits_file in enumerate(files):
+        print('analyzing file {} of {}'.format(index + 1, len(files)))
+        sitelist = load_hits_file(hits_file)
+        protein_seq = get_protein_seq(sitelist)
+
+        header = protein_seq
+        column_header = ' ,Frag_number,Frag Type,Fixed Mod,Variable Mod,Term Mod,Observed Mass,Theoretical Mass,Start AA,End AA,Error,Sequence,Intensity,Start AA For Fig,Formula'
+        output_str = f"{header}\n{column_header}\n"
+
+        dummy_indx = 0
+        for site in sitelist:
+            for hit in site.hits:
+                # print(hit)
+                # print(hit.thy_ion.thy_mods)
+                fragment_seq = hit.thy_ion.sequence
+                interindex = re.compile(fragment_seq, re.I)
+                mo = interindex.search(protein_seq)
+                # print(mo.start()+1)
+
+                # Add one to "translate from python indexing to residue number
+                # Add uniport offset to match uniport residue numbers and properly id disulfuide bonds
+                seqstart = mo.start() + 1 + uniprot_offset
+                seqend = mo.end() + 1 + uniprot_offset
+
+                # print(hit.exp_ion.pkht_cluster)
+
+                #For the list of mods replace "," with ";"
+                print(hit.thy_ion.thy_mods)
+                if hit.thy_ion.thy_mods:
+                    mods = ';'.join(map(str, hit.thy_ion.thy_mods[0]))
+                    print(f"Mods = {mods}")
+                else:
+                    mods = ""
+
+                output_str += f"{dummy_indx},{dummy_indx+1},{hit.thy_ion.ion_type},{mods},{0},{0},{hit.exp_ion.mz_mono},{hit.thy_ion.mz_mono},{seqstart},{seqend },{hit.cal_error},{fragment_seq},{hit.exp_ion.pkht_cluster},{mo.start()},{'not yet for term'}\n"
+                dummy_indx += 1
+
+        output_filename = os.path.basename(hits_file).rstrip('.hits')
+        csv_filepath = os.path.join(outputdir, output_filename + '_clipsfig3.csv')
+
+        output = open(csv_filepath, 'w')
+        output.write(output_str)
+        output.close()
+        print(output_str)
+
+
+
+def fragment_plotter(inputfiles, outputdir, internal = False):
+    """
+    From ClipsMS
+    :param internal: bool, if true internals will be plotted
+    :param inputfiles:
+    :return:
+    """
+
+    # outputdir = filedialog.askdirectory(title='Choose Output Folder')
+    os.chdir(outputdir)
+
+    for index, file in enumerate(inputfiles):
+        print('analyzing file {} of {}'.format(index + 1, len(inputfiles)))
+        # Open data file and convert to pandas frame
+
+        prot_seq = ''
+
+        if internal:
+            header_data = pd.read_csv(file,sep='\t')
+            print(f"headers = {header_data.head(0)}")
+            idx = 0
+            for i in header_data.head(0):
+                if idx == 0:
+                    print(f"i = {i}")
+                    prot_seq = i
+                else:
+                    continue
+                idx += 1
+            data = pd.read_csv(file, header=1, sep='\t')
+            ordered_df = data
+        else:
+            header_data = pd.read_csv(file)
+            for i in header_data.head(0):
+                prot_seq = i
+            data = pd.read_csv(file, header=1)
+            data_A_B_C = pd.DataFrame(columns=data.columns)
+            data_X_Y_Z = pd.DataFrame(columns=data.columns)
+            data_Int_Frag = pd.DataFrame(columns=data.columns)
+
+            cond = data['Frag Type'] == 'a'
+            rows = data.loc[cond, :]
+            data_A_B_C = data_A_B_C.append(rows, ignore_index=True)
+            data.drop(rows.index, inplace=True)
+            cond = data['Frag Type'] == 'b'
+            rows = data.loc[cond, :]
+            data_A_B_C = data_A_B_C.append(rows, ignore_index=True)
+            data.drop(rows.index, inplace=True)
+            cond = data['Frag Type'] == 'c'
+            rows = data.loc[cond, :]
+            data_A_B_C = data_A_B_C.append(rows, ignore_index=True)
+            data.drop(rows.index, inplace=True)
+            cond = data['Frag Type'] == 'c-dot'
+            rows = data.loc[cond, :]
+            data_A_B_C = data_A_B_C.append(rows, ignore_index=True)
+            data.drop(rows.index, inplace=True)
+            cond = data['Frag Type'] == 'x'
+            rows = data.loc[cond, :]
+            data_X_Y_Z = data_X_Y_Z.append(rows, ignore_index=True)
+            data.drop(rows.index, inplace=True)
+            cond = data['Frag Type'] == 'y'
+            rows = data.loc[cond, :]
+            data_X_Y_Z = data_X_Y_Z.append(rows, ignore_index=True)
+            data.drop(rows.index, inplace=True)
+            cond = data['Frag Type'] == 'z'
+            rows = data.loc[cond, :]
+            data_X_Y_Z = data_X_Y_Z.append(rows, ignore_index=True)
+            cond = data['Frag Type'] == 'z-dot'
+            rows = data.loc[cond, :]
+            data_X_Y_Z = data_X_Y_Z.append(rows, ignore_index=True)
+            data.drop(rows.index, inplace=True)
+
+            data_A_B_C_two = data_A_B_C.sort_values(by=['End AA'])
+            data_X_Y_Z_two = data_X_Y_Z.sort_values(by=['Start AA'])
+            ordered_df = pd.concat([data_A_B_C_two, data_X_Y_Z_two])
+
+        my_range = range(1, len(ordered_df.index) + 1)
+
+        # print(ordered_df)
+        # Fragment sites
+        fig3 = plt.figure()
+
+
+        if internal:
+
+            fig3.suptitle('Internal Fragment Location', fontsize=14)
+            plt.hlines(y=my_range, xmin=ordered_df['Start AA'], xmax=ordered_df['End AA'], color='grey',
+                       alpha=0.2)
+            plt.scatter(ordered_df['Start AA'], my_range, color='purple', label='Start AA',
+                        s=ordered_df['Intensity'] / ordered_df['Intensity'].max() * 8)
+            plt.scatter(ordered_df['End AA'], my_range, color='purple', label='End AA',
+                        s=ordered_df['Intensity'] / ordered_df['Intensity'].max() * 8)
+        else:
+            # The vertical plot is made using the hline function
+
+            fig3.suptitle('Terminal Fragment Location', fontsize=14)
+            plt.hlines(y=my_range, xmin=ordered_df['Start AA For Fig'], xmax=ordered_df['End AA'], color='grey', alpha=0.2)
+            plt.scatter(ordered_df['Start AA For Fig'], my_range, color='magenta', label='Start AA For Fig',
+                        s=ordered_df['Intensity'] / ordered_df['Intensity'].max() * 8)
+            plt.scatter(ordered_df['End AA'], my_range, color='magenta', label='End AA',
+                        s=ordered_df['Intensity'] / ordered_df['Intensity'].max() * 8)
+
+        # print(ordered_df['Fixed Mod'])
+        # for i in range(0, k_ml):
+        #     if modificationnumber[i] != 0:
+        #         plt.axvline(x=modificationnumber[i] - 0.5, color='k', linestyle='--')
+        #     else:
+        #         nothing = 0
+        # # plt.legend()
+
+
+
+        plt.yticks([])
+        length_sequence = len(prot_seq)
+        # print(prot_seq)
+        # print(len(prot_seq))
+        if length_sequence < 10:
+            plt.xticks(np.arange(0, length_sequence + 1, step=1))
+        else:
+            plt.xticks(np.arange(0, length_sequence + 1, step=round(length_sequence / 10)))
+        plt.xlabel('Amino Acid Number')
+
+        if internal:
+            output_filename = os.path.basename(file).rstrip('.tsv')
+        else:
+            output_filename = os.path.basename(file).rstrip('.csv')
+
+        plt.savefig(f'{output_filename}.svg')
+
+        # print('Done (7/7)')
+        # plt.show()
+        plt.clf()
+
+def average_unmatched(file_paths):
+    """
+    Function to take several unmatched files and merged them into one
+    :param file_paths:
+    :return:
+    """
+    outputdir = filedialog.askdirectory(title='Choose Output Folder')
+    output_str = "mz,z,int\n"
+    final_ls = []
+    dictcount = {}
+    for index, file in enumerate(file_paths):
+
+        expionlist = load_hits_file(file)
+        # print(len(expionlist))
+        for ion in expionlist:
+            if ion in dictcount:
+                dictcount[ion].append(index)
+            else:
+                dictcount[ion] = [index]
+    # print(final_ls)
+
+    # print(dictcount)
+    # print(len(file_paths))
+
+    for ion in dictcount:
+        # if len(dictcount[ion]) == len(file_paths):
+            # print(ion, dictcount[ion])
+            final_ls.append(ion)
+
+
+    # print(len(final_ls))
+
+
+    for ion in final_ls:
+        # print(ion, dictcount[ion])
+        output_str += f"{ion.mz_mono},{ion.charge},{ion.pkht_cluster}\n"
+
+    output_filename = os.path.basename(file_paths[0]).rstrip('.unmatched')
+    csv_filepath = os.path.join(outputdir, output_filename + '_unmatched-merged.csv')
+
+    output = open(csv_filepath, 'w')
+    output.write(output_str)
+    output.close()
+    # print(output_str)
+
+def merging_interalfrag_tsv(tsv_paths, avg = None):
+    """
+    Function to merge internal fragment results into one file. The average option merges, but only keeps the ions that appeare in all replicates/files
+    :param tsv_paths:
+    :return:
+    """
+    outputdir = filedialog.askdirectory(title='Choose Output Folder')
+
+    if avg:
+        neutmono_dict = {}
+        avg_linels = []
+        avgoutput_str = f"neutral exp_ion\tneutral theoretical ion\tseq\tcharge\tmz_mono\ttmods\tion_type\tcysteine\tlocations\tss_count\tcysteines-with-mods\tcysteine mods\tStart AA\tEnd AA\treverse_bool\tIntensity\tcyclic density\terror\tchemical_composition\tisomz_score\tisoint_score\tfragment_score\n"
+        for index, file in enumerate(tsv_paths):
+            with open(file, 'r') as batch:
+                lines = list(batch)
+                idx_line = 0
+                for line in lines:
+                    linesplt = line.split("\t")
+                    # print(linesplt)
+                    if idx_line > 1:
+                        if f"{linesplt[1]}-{linesplt[11]}" in neutmono_dict:
+                            # continue
+                            neutmono_dict[f"{linesplt[1]}-{linesplt[11]}"].append(index)
+                        else:
+                            avg_linels.append(line)
+                            # neutmono_ls.append(f"{linesplt[1]}-{linesplt[11]}")
+                            neutmono_dict[f"{linesplt[1]}-{linesplt[11]}"] = [index]
+
+                    idx_line +=1
+
+        # print(neutmono_dict)
+
+        for line in avg_linels:
+            lnsplt = line.split("\t")
+            # print(lnsplt)
+            # print(neutmono_dict[f"{lnsplt[1]}-{lnsplt[11]}"])
+            replicates_num= len(neutmono_dict[f"{lnsplt[1]}-{lnsplt[11]}"])
+
+            if replicates_num == len(tsv_paths):
+                avgoutput_str += line
+
+        # # output_filename = os.path.basename(tsv_paths[0]).rstrip('.tsv')
+        output_filename = os.path.dirname(tsv_paths[0]).split("/")[-1]
+        # # print(output_filename)
+        tsv_filepath = os.path.join(outputdir, output_filename + '_avg.tsv')
+        # #
+        output = open(tsv_filepath, 'w')
+        output.write(avgoutput_str)
+        output.close()
+
+
+
+    else:
+
+        merged_ls = []
+        output_str = f"neutral exp_ion\tneutral theoretical ion\tseq\tcharge\tmz_mono\ttmods\tion_type\tcysteine\tlocations\tss_count\tcysteines-with-mods\tcysteine mods\tStart AA\tEnd AA\treverse_bool\tIntensity\tcyclic density\terror\tchemical_composition\tisomz_score\tisoint_score\tfragment_score\n"
+        for index, file in enumerate(tsv_paths):
+            with open(file, 'r') as batch:
+                lines = list(batch)
+
+                idx_line = 0
+                for line in lines:
+                    linesplt = line.split("\t")
+                    if idx_line > 2:
+                        output_str += line
+                        merged_ls.append(linesplt)
+                    idx_line += 1
+
+        # output_filename = os.path.basename(tsv_paths[0]).rstrip('.tsv')
+        output_filename =os.path.dirname(tsv_paths[0]).split("/")[-1]
+        # print(output_filename)
+        tsv_filepath = os.path.join(outputdir, output_filename + '_merged.tsv')
+        #
+        output = open(tsv_filepath, 'w')
+        output.write(output_str)
+        output.close()
+
+
+def seq_cov_termplusinter():
+    """
+    Function to combine terminal and internal fragment site and produced a total seqeunce coverage number
+    Not polished, somethings are hard coded..BEWARE!
+    :return:
+    """
+    tsvfiles = filedialog.askopenfilenames(title='InternalFrags', filetypes=[('Internal Matches', '.tsv')])
+
+    for index, file in enumerate(tsvfiles):
+        print('analyzing file {} of {}'.format(index + 1, len(tsvfiles)))
+
+        print(os.path.basename(file))
+        # Open data file and convert to pandas frame
+
+        prot_seq = ''
+
+        header_data = pd.read_csv(file, sep='\t')
+        print(f"headers = {header_data.head(0)}")
+        idx = 0
+        for i in header_data.head(0):
+            if idx == 0:
+                # print(f"i = {i}")
+                prot_seq = i
+            else:
+                continue
+            idx += 1
+
+        data = pd.read_csv(file, header=1, sep='\t')
+        ordered_df = data
+
+        print(prot_seq)
+
+        total_indeces = []
+        for indx in ordered_df["Start AA"]:
+            total_indeces.append(indx)
+
+        for indx in ordered_df["End AA"]:
+            total_indeces.append(indx)
+
+        print(total_indeces)
+
+        terminalN_indx = input("N terminal indeces: ")
+
+        terminalC_indx = input("C terminal indeces: ")
+
+        # From str to list
+        termN_strp = terminalN_indx.strip()
+        termN_ls = terminalN_indx.split(";")
+        termN_lsint = [int(x) for x in termN_ls]
+        termN_setint = set(termN_lsint)
+
+        termC_strp = terminalC_indx.strip()
+        termC_ls = terminalC_indx.split(";")
+        termC_lsint = [int(x) for x in termC_ls]
+
+        # Combine all lists of indeces
+        total_indeces.extend(termC_lsint)
+        total_indeces.extend(termN_lsint)
+
+        print(termC_lsint)
+
+        print(f"total_indeces = {total_indeces}")
+        print(len(total_indeces))
+
+        total_indeces_set = set(total_indeces)
+        print(f"total_indeces_set = {total_indeces_set}")
+        print(len(total_indeces_set))
+
+        print(f" Complete sequence coverage: {(len(total_indeces_set) / 126) * 100}")
+
+#An intial Implementation of Data Analysis tools for Fragariyo
+class DataAnalysisUI(object):
+    """
+    Simple dialog with several fields build with Pygubu for inputting crop values
+    """
+    def __init__(self, ui_file):
+
+        self.builder = pygubu.Builder()
+
+        # load the UI file
+        self.builder.add_from_file(ui_file)
+        # create widget using provided root (Tk) window
+        self.mainwindow = self.builder.get_object('datanalysis')
+
+        # Connect Delete event to a toplevel window
+        self.mainwindow.protocol('WM_DELETE_WINDOW', self.on_close_window)
+
+        self.return_code = None
+
+        callbacks = {
+            'on_singleseqcov_clicked': self.singleseqcoverage,
+            'on_combinedeqcov_clicked': self.comboseqcoverage,
+
+        }
+        self.builder.connect_callbacks(callbacks)
+
+
+
+
+
+    def run(self):
+        """
+        Run the UI and return the output values
+        :return: List of crop values [dt low, dt high, cv low, cv high]
+        """
+        self.builder.get_object('datanalysis').grab_set()     # prevent users from clicking other stuff while crop is active
+        self.mainwindow.mainloop()
+        self.builder.get_object('datanalysis').grab_release()
+        return self.return_code
+
+
+    def on_close_window(self):
+        """
+        Quit the mainwindow to stop the mainloop and get it to return
+        the crop values, then destroy it to remove it from screen.
+        :return: the provided crop values, or None if none were provided
+        """
+        self.mainwindow.quit()
+        self.mainwindow.destroy()
+
+
 
 
 if __name__ == '__main__':
     root = tkinter.Tk()
     root.withdraw()
 
-    # Seq_cov functions
+    # # Seq_cov functions
+    #Functions to obtain files
     hitsfiles = filedialog.askopenfilenames(title='Load Hits Files', filetypes=[('Hits', '.hits')])
+    # unmatchfiles = filedialog.askopenfilenames(title='Unmatched Ions Files', filetypes=[('Unmatched', '.unmatched')])
+    # tsvfiles = filedialog.askopenfilenames(title='InternalFrags', filetypes=[('Internal Matches', '.tsv')])
+    #
+    #
+    #Fucntions to obtain seqeunce information
+    # frips_main_seq_cov(hitsfiles, seqcov=True, seqcov_iontype=False, combination=False)
+    frips_main_seq_cov(hitsfiles, termi_frags_stats=True)
+    # frips_main_seq_cov(hitsfiles, intenanalysis=True)
+    # average_unmatched(unmatchfiles)
+    # merging_interalfrag_tsv(tsvfiles, avg = True)
 
-    # main_seq_cov(hitsfiles)
-
-    # seq_cov_overlay(hits_files, norm_bool=False)
-
-    # batch_main_seq_cov()
-
-    frips_main_seq_cov(hitsfiles, seqcov=False, seqcov_iontype=False, combination=True)
-
-    #TODO: start including internal fragments for sequence coverage calculations
-
-
+    #
+    # ClipsMS_FragmentorPipe(hitsfiles)
+    #
+    # inputfiles = filedialog.askopenfilenames(title='Load Hits Files', filetypes=[('CSV', '_clipsfig3.csv'),('Internal Fragments', '.tsv')])
+    # fragment_plotter(inputfiles, internal=False)
 
     #Reducing FDR files
     # average_main(batch=True)
     # compare_main()
     #
-    #For complicated searches where passes must be separated
+    #For complicated searches where apsses must be separated
     # merging_batch()
     
 

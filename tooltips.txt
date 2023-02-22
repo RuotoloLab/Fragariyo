@@ -1,0 +1,13 @@
+# component name	tooltip
+Button_modsrepo	Select .csv file containing modifications to be used
+Button_change_outputdir	Select a new directory in which to save output files. Otherwise they will be saved in Fragariyo's home directory.
+Button_about	Open the about file
+Button_help	Open the CIUSuite 2 manual (PDF)
+Button_termrun	Peak Matching for Terminal Experimental Ions
+Button_IMTBXRenaming	Script to rextract IMTBX output from .raw folders with filename
+Button_importxy	Script to extract isotope envelope coordinates for scoring of internal fragments
+Button_internalrun	Peak Matching for Internal Experimental Ions obtained from Unmatched files after terminal matching.
+Menucommand_singleseqcov	It calculates the sequence coverage based on terminal fragments. It output graphs of coverage and a .csv file with the sequence coverage per file.
+Menucommand_comboseqcov	It calculates the sequence coverage based on terminal fragments by combining two files. It output graphs of coverage and a .csv file with the sequence coverage.
+Menucommand_mergingInternal	It merges internal fragment output files (.tsv).
+Menucommand_averagingInternal	"It merges internal fragment output files (.tsv), but it only retains ions that are in all files."

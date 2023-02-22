@@ -12,6 +12,8 @@ import os
 import OutputAnalysis_v2
 import tkinter
 from tkinter import filedialog
+from terminalFragmentor_Main import FragmentSite
+from terminalFragmentor_Main import ThyIon
 
 
 def main_frag_propensities(files, plot_tmp_bool, extension):
@@ -74,7 +76,10 @@ def compute_propensities(sitelist, protein_seq, amino_acids):
     total_int = 0
     for site in sitelist:
         for hit in site.hits:
+            print(hit.exp_ion)
+            print(hit.exp_ion.pkar_cluster)
             total_int += float(hit.exp_ion.pkar_cluster)
+
 
     # get total intensity at this site and save
     for site in sitelist:
