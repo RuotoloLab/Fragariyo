@@ -1003,7 +1003,7 @@ def print_hits(protein_seq, fragsites_input, outputpath):
 
     with open(outputpath, 'w') as outfile:
         # write protein seq and header
-        outfile.write('Protein seq:,' + protein_seq + '\n')
+        # outfile.write('Protein seq:,' + protein_seq + '\n')
         header_line = write_hit_header()
         outfile.write(header_line)
 
@@ -1057,6 +1057,7 @@ def fragments_to_picklefile(file_title, full_proteinseq, fragments_dict):
     """
     outname = file_title + ".ions"
     out_tupsaved = [full_proteinseq, fragments_dict]
+    print(f"Saving database file as {outname}")
     with open(outname, 'wb') as picklefile:
         pickle.dump(out_tupsaved, picklefile)
 
@@ -1099,6 +1100,8 @@ def main_batch_multipass(main_outdir=None, modificationsrepo=None):
     :return: void
     """
 
+    os.chdir(main_outdir)
+
     #set up Tkinter
     root = tkinter.Tk()
     root.withdraw()
@@ -1139,33 +1142,12 @@ def main_batch_multipass(main_outdir=None, modificationsrepo=None):
         protein_seq = params[0]
         paramobj_dict = params[1]
 
+
         for analysis in paramobj_dict:
             print(f"Current Analysis = {analysis} of {len(paramobj_dict)}")
 
             #A dictionary of passes per analysis
             passes_dict = {}
-            # for paramobj in paramobj_dict[analysis]:
-            #     print(f"PassName = {paramobj.analysisName}")
-            #
-            #     print("~~~~~~Fragmentation starts~~~~~~")
-            #     # It returns a tuple with the analysis name in first position then the sites_dict
-            #     # in the second post, and in the third, fourth, and fifth position parameters for mass calibration
-            #     theoretical_database = fragments(analysis_name=paramobj.analysisName, sequence=paramobj.seq, types=paramobj.iontypes,
-            #                            maxcharge=paramobj.maxcharge,
-            #                           neutral_bool=paramobj.neutraloss_bool,
-            #                           cystine=paramobj.disulfide_bool,
-            #                            combo_dict=paramobj.combodict_calc(),
-            #                           ss_ls=paramobj.disulfide_ls,
-            #                           intrabroken_ss=paramobj.ss_allowbroken,
-            #                           natredcys=paramobj.naturally_redcys,
-            #                           modbool=paramobj.mod_bool,
-            #                           noncysmods=paramobj.noncysmods,
-            #                           reverse_seq=False, init_tol=paramobj.init_tol, final_tol=paramobj.final_tol, cal_bool=paramobj.cal_bool )
-            #     passes_dict[paramobj.analysisName] = theoretical_database
-            #
-            # #Add theoretical_database to the passes_dict
-            # analysis_dict[analysis] = passes_dict
-
 
             for paramobj in paramobj_dict[analysis]:
                 print(f"PassName = {paramobj.analysisName}")
@@ -1183,21 +1165,6 @@ def main_batch_multipass(main_outdir=None, modificationsrepo=None):
                 pool.close()  # tell the pool we don't need it to process any more data
 
                 passes_dict[paramobj.analysisName] = pool_result.get()
-
-
-                # It returns a tuple with the analysis name in first position then the sites_dict
-                # in the second post, and in the third, fourth, and fifth position parameters for mass calibration
-                # theoretical_database = fragments(analysis_name=paramobj.analysisName, sequence=paramobj.seq, types=paramobj.iontypes,
-                #                        maxcharge=paramobj.maxcharge,
-                #                       neutral_bool=paramobj.neutraloss_bool,
-                #                       cystine=paramobj.disulfide_bool,
-                #                        combo_dict=paramobj.combodict_calc(),
-                #                       ss_ls=paramobj.disulfide_ls,
-                #                       intrabroken_ss=paramobj.ss_allowbroken,
-                #                       natredcys=paramobj.naturally_redcys,
-                #                       modbool=paramobj.mod_bool,
-                #                       noncysmods=paramobj.noncysmods,
-                #                       reverse_seq=False, init_tol=paramobj.init_tol, final_tol=paramobj.final_tol, cal_bool=paramobj.cal_bool )
 
 
             #Add theoretical_database to the passes_dict

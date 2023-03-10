@@ -483,7 +483,11 @@ def modsrepo_creator(param_file):
             params.stringname = splits[ppos['Printout Mod name']]
             params.targetres = splits[ppos['Target Residue']]
             params.masschange = float(splits[ppos['Mass Change']])
-            params.fixedflag = int(splits[ppos['Fixed Flag']])
+
+            #Fixed position
+            fixedposition = int(splits[ppos['Fixed Flag']])
+            params.fixedflag = [fixedposition]
+
             params.maxmodnum = int(splits[ppos['Max Mods']])
             params.terminus = splits[ppos['Protein Terminus']]
 
