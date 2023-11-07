@@ -485,8 +485,10 @@ def modsrepo_creator(param_file):
             params.masschange = float(splits[ppos['Mass Change']])
 
             #Fixed position
-            fixedposition = int(splits[ppos['Fixed Flag']])
-            params.fixedflag = [fixedposition]
+            fixedpositions = splits[ppos['Fixed Flag']]
+            fixedpossplit = fixedpositions.split(";")
+
+            params.fixedflag = [eval(i) for i in fixedpossplit]
 
             params.maxmodnum = int(splits[ppos['Max Mods']])
             params.terminus = splits[ppos['Protein Terminus']]

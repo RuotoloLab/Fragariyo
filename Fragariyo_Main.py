@@ -23,9 +23,7 @@ import subprocess
 import multiprocessing
 import logging
 from logging.handlers import RotatingFileHandler
-
 import SimpleToolTip
-
 import matplotlib
 import RenameIMTBXoutputs
 import Modifications
@@ -53,7 +51,7 @@ help_file = os.path.join(root_dir, 'Fragariyo_SOP.pdf')
 about_file = os.path.join(root_dir, 'README.txt')
 hard_datanalysis_ui = os.path.join(root_dir, 'UI', 'DataAnalysis_GUI.ui')
 
-
+# print(hard_file_path_ui)
 
 class Fragariyo(object):
     """
@@ -109,6 +107,10 @@ class Fragariyo(object):
 
         }
         builder.connect_callbacks(callbacks)
+
+        self.massresolution = self.builder.get_object('massresolution')
+        self.toleranceerror = self.builder.get_object('toleranceerror')
+
         self.initialize_tooltips()
 
 
@@ -119,6 +121,10 @@ class Fragariyo(object):
         self.output_dir = root_dir
         self.output_dir_override = False
         self.modificationsrepo = {}
+
+
+
+
 
     def run(self):
         """
@@ -246,7 +252,7 @@ class Fragariyo(object):
 
         self.progress_started()
 
-        InternalFragmentor_Main.internal_main_batch_multipass(main_outdir=self.output_dir,repoofmods=self.modificationsrepo)
+        InternalFragmentor_Main.internal_main_batch_multipass(main_outdir=self.output_dir,repoofmods=self.modificationsrepo, massresolution=self.massresolution.get(),error_ppm=self.toleranceerror.get())
 
 
         self.progress_done()

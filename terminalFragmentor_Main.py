@@ -12,7 +12,6 @@ import combination
 from PyQt5 import QtWidgets
 import tkinter
 import sys
-import RenameIMTBXoutputs
 from pyteomics import mass
 from tkinter import filedialog
 import os
@@ -20,51 +19,9 @@ import pickle
 import Parameter_Parser_terminal
 import re
 from tkinter import messagebox
-# from Modifications import mods_repo
 from PeakMatch import matchmaker_terminal_multipass
 import multiprocessing
 
-# update Pyteomics masses to use custom ion types
-mass.std_ion_comp.update({
-    'M':        mass.Composition(formula=''),
-    'M-H2O':    mass.Composition(formula='H-2O-1'),
-    'M-NH3':    mass.Composition(formula='N-1H-3'),
-    'a':        mass.Composition(formula='H-2O-1' + 'C-1O-1'),
-    'a+1':        mass.Composition(formula='H-2O-1' + 'C-1O-1'+'H1'),
-    'a-H2O':    mass.Composition(formula='H-2O-1' + 'C-1O-1' + 'H-2O-1'),
-    'a-NH3':    mass.Composition(formula='H-2O-1' + 'C-1O-1' + 'N-1H-3'),
-    'b':        mass.Composition(formula='H-2O-1'),
-    'b-H2O':    mass.Composition(formula='H-2O-1' + 'H-2O-1'),
-    'b-NH3':    mass.Composition(formula='H-2O-1' + 'N-1H-3'),
-    'c':        mass.Composition(formula='H-2O-1' + 'NH3'),
-    'c-dot':    mass.Composition(formula='H-2O-1' + 'NH3' + 'H-1'),
-    'c-1':    mass.Composition(formula='H-2O-1' + 'NH3' + 'H1'),
-    'c+1':      mass.Composition(formula='H-2O-1' + 'NH3' + 'H1'),
-    'c+2':      mass.Composition(formula='H-2O-1' + 'NH3' + 'H2'),
-    'c-H2O':    mass.Composition(formula='H-2O-1' + 'NH3' + 'H-2O-1'),
-    'c-NH3':    mass.Composition(formula='H-2O-1'),
-    'x':        mass.Composition(formula='H-2O-1' + 'CO2'),
-    'x-H2O':    mass.Composition(formula='H-2O-1' + 'CO2' + 'H-2O-1'),
-    'x-NH3':    mass.Composition(formula='H-2O-1' + 'CO2' + 'N-1H-3'),
-    'y':        mass.Composition(formula=''),
-    'y-H2O':    mass.Composition(formula='H-2O-1'),
-    'y-NH3':    mass.Composition(formula='N-1H-3'),
-    'z-dot':        mass.Composition(formula='H-2O-1' + 'ON-1H-1'),
-    'z':    mass.Composition(formula='H-2O-1' + 'ON-1'),
-    'z+1':      mass.Composition(formula='H-2O-1' + 'ON-1H1'),
-    'z+2':      mass.Composition(formula='H-2O-1' + 'ON-1H2'),
-    'z+3':      mass.Composition(formula='H-2O-1' + 'ON-1H3'),
-    'z-H2O':    mass.Composition(formula='H-2O-1' + 'ON-1H-1' + 'H-2O-1'),
-    'z-NH3':    mass.Composition(formula='H-2O-1' + 'ON-1H-1' + 'N-1H-3'),
-    #Internal fragments ion types
-    'c-z': mass.Composition(formula='H-2O-1' + 'NH3'+'H-2O-1' + 'ON-1'),
-    'c-zdot': mass.Composition(formula='H-2O-1' + 'NH3'+'H-2O-1' + 'ON-1H-1'),
-    'cdot-z': mass.Composition(formula='H-2O-1' + 'NH3' + 'H-1'+'H-2O-1' + 'ON-1'),
-    'c-y': mass.Composition(formula='H-2O-1' + 'NH3'+ ''),
-    'cdot-y': mass.Composition(formula='H-2O-1' + 'NH3' + 'H-1'+''),
-    'a-z': mass.Composition(formula='H-2O-1' + 'C-1O-1'+'H-2O-1' + 'ON-1'),
-    'a-zdot': mass.Composition(formula='H-2O-1' + 'C-1O-1'+'H-2O-1' + 'ON-1H-1')
-    })
 
 
 class FragmentSite:
@@ -355,6 +312,7 @@ def modificator(FragmentSiteObj, mod_ls, charge, var_mods_dict, mz_mono, neutral
     mods = []
     accum_mz_fx = 0
     accum_neutral_fx = 0
+    # print(mods, accum_neutral_fx, neutral_mono)
 
     for modification in mod_ls:
         mods_repo[modification].current_num = 0
@@ -366,13 +324,13 @@ def modificator(FragmentSiteObj, mod_ls, charge, var_mods_dict, mz_mono, neutral
         if mods_repo[modification].target_aas:
             for amino in mods_repo[modification].target_aas:
                 # print(f"In the  fragment, {amino} is at positions {FragmentSiteObj.resi_dict[amino]}")
+                # print(f"mods_repo[modification].fixed ={mods_repo[modification].fixed}")
 
                 if FragmentSiteObj.resi_dict[amino]:
                     if mods_repo[modification].fixed:
                         for res in mods_repo[modification].fixed:
                             if res in FragmentSiteObj.resi_dict[amino]:
-                                # print(
-                                #     f"The modification is fixed at  {mods_repo[modification].fixed} which is in this fragment!")
+                                # print(f"The modification is fixed at  {res} which is in this fragment!")
                                 accum_mz_fx += (mods_repo[modification].mass) / charge
                                 accum_neutral_fx += mods_repo[modification].mass
                                 mods.append(modification)
@@ -433,6 +391,7 @@ def modificator(FragmentSiteObj, mod_ls, charge, var_mods_dict, mz_mono, neutral
 
     mz_mono += accum_mz_fx
     neutral_mono += accum_neutral_fx
+    # print(mods, accum_neutral_fx, neutral_mono)
 
     return mz_mono, neutral_mono, mods, var_mods_dict
 
@@ -474,6 +433,9 @@ def mass_calc(frag_counter, FragmentSiteObj, ion_types, maxcharge, neutrals = No
                 if ion_type[0] in ['a', 'b', 'c']:
                     continue
 
+
+
+            # print(f"{FragmentSiteObj.term} and {ion_type}")
             # calculate m/z and neutral
             mz_mono_org = mass.fast_mass2(FragmentSiteObj.seq, ion_type=ion_type, charge=charge)
             neutral_mono_org = mass.fast_mass2(FragmentSiteObj.seq, ion_type=ion_type, charge=0)
@@ -523,9 +485,6 @@ def mass_calc(frag_counter, FragmentSiteObj, ion_types, maxcharge, neutrals = No
                         mz_mono, neutral_mono, mods, var_mods_dict = modificator(FragmentSiteObj, mod_ls, charge,
                                                                                  var_mods_dict, mz_mono, neutral_mono, modificatorrepo)
 
-                        # except removing the hydrogens due to the disulfide bonds
-                        neutral_mono = neutral_mono + sscount * (-1.0078 * 2)
-                        mz_mono = mz_mono + (sscount * ((-1.0078 / charge) * 2))
 
                         # Modify neutral mass with the modifications possible
                         neutral_mono = neutral_mono + cysmodmass_dict[cys_num][cys_modls] + sscount * (-1.0078 * 2)
@@ -535,9 +494,6 @@ def mass_calc(frag_counter, FragmentSiteObj, ion_types, maxcharge, neutrals = No
                     else:
                         # If the internal fragment contains cysteines for modifications
 
-                            # except removing the hydrogens due to the disulfide bonds
-                            neutral_mono = neutral_mono + sscount * (-1.0078 * 2)
-                            mz_mono = mz_mono + (sscount * ((-1.0078 / charge) * 2))
 
                             # Modify neutral mass with the modifications possible
                             neutral_mono = neutral_mono + cysmodmass_dict[cys_num][cys_modls] + sscount * (-1.0078 * 2)
@@ -548,6 +504,8 @@ def mass_calc(frag_counter, FragmentSiteObj, ion_types, maxcharge, neutrals = No
             elif mod_ls:
                 mz_mono, neutral_mono, mods, var_mods_dict = modificator(FragmentSiteObj, mod_ls, charge,
                                                                          var_mods_dict, mz_mono, neutral_mono, modificatorrepo)
+
+
 
             # If neutrals are to be considered!
             neutloss = ''
@@ -617,7 +575,7 @@ def mass_calc(frag_counter, FragmentSiteObj, ion_types, maxcharge, neutrals = No
                                              cys_num, neutral_mono, cys_modls, modscopy, cysloc, sscount,
                                              FragmentSiteObj.term,
                                              reverse_flag)
-                    # print(f"Mods in thy ion {theoretical_ion.mods}")
+                    # print(f"Mods in thy ion {modscopy }")
                     # print(f"cys mods in thy ion {theoretical_ion.cysmods}")
                     # print(f"ThyIon {theoretical_ion}")
                     FragmentSiteObj.theo_ions[theoretical_ion.mz_mono] = theoretical_ion
@@ -1028,7 +986,9 @@ def print_unmatched(ls_expions, outputpath):
     :return: none (void)
     """
 
-    with open(outputpath.strip(".csv") + "_Unmatched" + '.csv', 'w') as outfile:
+    csvstripoutname = outputpath.strip(".csv")
+    completoutname = r"{}_Unmathced.csv".format(csvstripoutname)
+    with open(completoutname, 'w') as outfile:
         # write protein seq and header
         outfile.write('mz,z,int\n')
 
@@ -1247,14 +1207,17 @@ def main_batch_multipass(main_outdir=None, modificationsrepo=None):
 
 if __name__ == '__main__':
     # print( f"z-dot = {mass.Composition(formula='H-2O-1' + 'ON-1H-1')}  'z'= {mass.Composition(formula='H-2O-1' + 'ON-1')}")
-    # print(f"c-zdot = {mass.Composition(formula='H-2O-1' + 'NH3'+'H-2O-1' + 'ON-1H-1')} ")
-    # print(f"c-z = {mass.Composition(formula='H-2O-1' + 'NH3'+'H-2O-1' + 'ON-1')} ")
+    print(f"c-zdot = {mass.Composition(formula='H-2O-1' + 'NH3' + 'H-2O-1' + 'ON-1')} ")
+    print(f"c-z = {mass.Composition(formula='H-2O-1' + 'NH3' + 'H-2O-1' + 'ON-1H-1')} ")
     # # print(f"c-y = {mass.Composition(formula='H-2O-1' + 'NH3'+ '')}")
-    # print(f"a-z = {mass.Composition(formula='H-2O-1' + 'C-1O-1'+'H-2O-1' + 'ON-1')}")
+    print(f"a-z = {mass.Composition(formula='H-2O-1' + 'C-1O-1'+ 'H-2O-1' + 'ON-1H-1')}")
     # print(f"a-zdot = {mass.Composition(formula='H-2O-1' + 'C-1O-1' + 'H-2O-1' + 'ON-1H-1')}")
     # print(f"'a-y':{mass.Composition(formula='H-2O-1' + 'C-1O-1' + '')}")
     # print(f"'b-y':{mass.Composition(formula='H-2O-1' + '')}")
+    print(f"c  = {mass.Composition(formula='H-2O-1' + 'NH3')}")
+    print(f"a = {mass.Composition(formula='H-2O-1' + 'C-1O-1')}")
+    print(f"a+1 = {mass.Composition(formula='H-2O-1' + 'C-1O-1'+ 'H1')}")
 
-    main_batch_multipass()
+    # main_batch_multipass()
 
 

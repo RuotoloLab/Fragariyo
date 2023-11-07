@@ -26,28 +26,30 @@ import RenameIMTBXoutputs
 ppos = {'Analysis Num':0,
         'Analysis Name': 1,
         'seq': 2,
-        'iontypes': 3,
-        'mincharge':4,
-        'maxcharge': 5,
-        'min_ifrag_len': 6,
-        'max_ifrag_len': 7,
-        'noncys_mods': 8,
-        'mods_array': 9,
-        'r': 10,
-        'disulfides': 11,
-        'uniprot_offset': 12,
-        'ss_allowbroken': 13,
-        'disulfides_ls': 14,
-        'naturally_redcys':15
+        'frag_chem':3,
+        # 'iontypes': 4,
+        # 'mincharge':5,
+        'maxcharge': 4,
+        'min_ifrag_len': 5,
+        'max_ifrag_len': 6,
+        'noncys_mods': 7,
+        'mods_array': 8,
+        'r': 9,
+        'disulfides': 10,
+        'uniprot_offset': 11,
+        'ss_allowbroken': 12,
+        'disulfides_ls': 13,
+        'naturally_redcys':14
         }
 
 
-INTERIONS = ['c-z', 'c-zdot', 'c-y', 'cdot-y', 'a-z', 'a-zdot', 'a-y', 'b-y', 'x-c', 'x-cdot']
+INTERIONSCID = ['b-y','a-y']
+INTERIONSECD = ['adot-y','z+1-c-1','c-zdot']
 
-def parse_disulf_ls(disulf_str):
+def parse_disulf_ls(disulf_str,uniprot_offset):
     """
     :param disulf_str: a list of strings of cysteine location involve in disulfide bonds (e.g ['15-18', ''])
-    :return: A list of cystine locations that are involve in disulfide bonds (set), e.g. [{18, 15}, set()]
+    :return: A list of cystine locations that are involve in disulfide bonds (set), e.g. [{18, 15}]
     """
 
     spl = disulf_str.split(";")
@@ -55,85 +57,27 @@ def parse_disulf_ls(disulf_str):
     # print(spl)
     ssls = []
     for ssbond in spl:
-        # print(ssbond)
-        enlace = ssbond.split("-")
-        bondset = set()
-        for num in enlace:
-            #If statement helps to get rid off and empty set
-            if num:
-                # print(f"num = {num}")
-                # print(f"num type = {type(num)}")
-                intnum = int(num)
-                bondset.add(intnum)
-                # print(f"bondset = {bondset}")
-            # else:
-            #     print("Not a number!")
+        if ssbond == '':
+            continue
+        else:
+            # print(ssbond)
+            enlace = ssbond.split("-")
+            bondset = set()
+            for num in enlace:
+                #If statement helps to get rid off and empty set
+                if num:
+                    # print(f"num = {num}")
+                    # print(f"num type = {type(num)}")
+                    intnum = int(num) - uniprot_offset
+                    bondset.add(intnum)
+                    # print(f"bondset = {bondset}")
+                # else:
+                #     print("Not a number!")
 
         ssls.append(bondset)
 
     # print(f"ssls = {ssls}")
     return ssls
-
-def parse_param_template(param_file, terminal = None):
-    """
-    Read template csv file for all parameter information.
-    :param param_file: (string) full system path to csv template file
-    """
-    with open(param_file, 'r') as pfile:
-        for line in list(pfile):
-            if line.startswith('#'):
-                continue
-
-            splits = line.rstrip('\n').split(',')
-            # print(splits)
-
-            #Initilize params object
-            params = Parameters()
-            params.analysisName = splits[ppos['Analysis Name']]
-            params.seq = splits[ppos['seq']].strip()
-            params.mincharge = int(splits[ppos['mincharge']])
-            params.maxcharge = int(splits[ppos['maxcharge']])
-
-            #Ion types
-            iontypes_str = splits[ppos['iontypes']]
-            iontypes_ls = []
-            # print(iontypes_str)
-            iontypes_strsplit = iontypes_str.split(';')
-            for type in iontypes_strsplit:
-                # print(type)
-                # for x in IONS:
-                #     if x == type:
-                #         iontypes_ls.append(x)
-                #     else:s
-                #         print("Incorrect Ion type!")
-                if type in INTERIONS:
-                        iontypes_ls.append(type)
-
-            # print(iontypes_ls)
-            params.iontypes = iontypes_ls
-
-            #Internal fragment length
-            params.min_len = int(splits[ppos['min_ifrag_len']])
-            params.max_len = int(splits[ppos['max_ifrag_len']])
-
-            # Parameteres for modification permutations for disulfide breakage
-            modstr = splits[ppos['mods_array']]
-            params.arr = mods_fromstr_tols(modstr)
-
-            params.r = splits[ppos['r']]
-
-            #Disulfide_analysis
-            params.disulfide_bool = parse_bool(splits[ppos['disulfides']])
-            params.uniprot_offset = int(splits[ppos['uniprot_offset']])
-            params.ss_allowbroken = int(splits[ppos['ss_allowbroken']])
-
-
-            #Parsing disulfides
-            disulfides_str = splits[ppos['disulfides_ls']]
-            params.disulfide_ls = parse_disulf_ls(disulfides_str)
-
-
-    return params
 
 
 def mods_fromstr_tols(modstr):
@@ -153,72 +97,8 @@ def mods_fromstr_tols(modstr):
     # print(f"In the Parser this is modbool! {mods_ls} and its length is {len(mods_ls)}")
     return mods_ls
 
-def parse_param_template_batch(param_file):
-    """
-    Read template csv file for all parameter information.
-    :param param_file: (string) full system path to csv template file
-    """
 
-    params_dict = {}
-
-    with open(param_file, 'r') as pfile:
-        for line in list(pfile):
-            if line.startswith('#'):
-                continue
-
-            splits = line.rstrip('\n').split(',')
-            # print(splits)
-
-            #Initilize params object
-            params = Parameters()
-            params.analysisName = splits[ppos['Analysis Name']]
-            params.seq = splits[ppos['seq']].strip()
-            params.mincharge = int(splits[ppos['mincharge']])
-            params.maxcharge = int(splits[ppos['maxcharge']])
-
-            #Ion types
-            iontypes_str = splits[ppos['iontypes']]
-            iontypes_ls = []
-            # print(iontypes_str)
-            iontypes_strsplit = iontypes_str.split(';')
-            for type in iontypes_strsplit:
-                print(type)
-                if type in INTERIONS:
-                    iontypes_ls.append(type)
-                else:
-                    print("Incorrect Ion type!")
-            # print(iontypes_ls)
-            params.iontypes = iontypes_ls
-
-            #Internal fragment length
-            params.min_len = int(splits[ppos['min_ifrag_len']])
-            params.max_len = int(splits[ppos['max_ifrag_len']])
-
-            #Parameteres for modification permutations
-            modstr = splits[ppos['mods_array']]
-            modssplit = modstr.split(';')
-            mods_ls = []
-            for mod in modssplit:
-                mods_ls.append((mod))
-            params.arr = mods_ls
-            params.r = splits[ppos['r']]
-
-            #Disulfide_analysis
-            params.disulfide_bool = parse_bool(splits[ppos['disulfides']])
-            params.uniprot_offset = int(splits[ppos['uniprot_offset']])
-            params.ss_allowbroken = int(splits[ppos['ss_allowbroken']])
-
-
-            #Parsing disulfides
-            disulfides_str = splits[ppos['disulfides_ls']]
-            params.disulfide_ls = parse_disulf_ls(disulfides_str)
-
-            params_dict[params.analysisName] = params
-
-
-    return params_dict
-
-def parse_param_template_batch_multipass(param_file, terminal=None):
+def parse_param_template_batch_multipass(param_file):
     """
     Read template csv file for all parameter information.
     :param param_file: (string) full system path to csv template file
@@ -249,21 +129,37 @@ def parse_param_template_batch_multipass(param_file, terminal=None):
             params.analysisName = splits[ppos['Analysis Name']]
             params.analysisNum = splits[ppos['Analysis Num']]
             params.seq = splits[ppos['seq']].strip()
-            params.mincharge = int(splits[ppos['mincharge']])
+            # params.mincharge = int(splits[ppos['mincharge']])
             params.maxcharge = int(splits[ppos['maxcharge']])
 
             #Ion types
-            iontypes_str = splits[ppos['iontypes']]
+            # iontypes_str = splits[ppos['iontypes']]
             iontypes_ls = []
             # print(iontypes_str)
-            iontypes_strsplit = iontypes_str.split(';')
-            for type in iontypes_strsplit:
-                # print(type)
-                if type in INTERIONS:
+            #iontypes_strsplit = iontypes_str.split(';')
+
+
+            fragmentation_type = splits[ppos["frag_chem"]]
+            params.fragmentchem = fragmentation_type
+
+            print(f"params.fragmentchem = {params.fragmentchem}")
+
+            if fragmentation_type == "CID":
+                for type in INTERIONSCID:
                     iontypes_ls.append(type)
-                else:
-                    print("Incorrect Ion type!")
-            # print(iontypes_ls)
+
+
+            elif fragmentation_type == "ECD" or fragmentation_type == "ETD":
+                for type in INTERIONSECD:
+                    iontypes_ls.append(type)
+
+
+            else:
+                print("CID or ExD only!")
+
+
+
+            print(f"iontypes_ls = {iontypes_ls}")
             params.iontypes = iontypes_ls
 
             #Internal fragment length
@@ -291,7 +187,7 @@ def parse_param_template_batch_multipass(param_file, terminal=None):
 
             #Parsing disulfides
             disulfides_str = splits[ppos['disulfides_ls']]
-            params.disulfide_ls = parse_disulf_ls(disulfides_str)
+            params.disulfide_ls = parse_disulf_ls(disulfides_str,params.uniprot_offset)
             params_dict[params.analysisNum].append(params)
 
             processed_analysis = current_analysis
@@ -344,6 +240,7 @@ class Parameters(object):
         self.mincharge = None
         self.maxcharge = None
         self.noncysmods = None
+        self.fragmentchem = None
 
         # Internal Fragment length
         self.min_len = None
@@ -376,7 +273,14 @@ class Parameters(object):
         self.update_dict()
 
     def combodict_calc(self):
-        combo_dict = combination.batch_combos(self.arr, int(self.r))
+        """
+        Calculates the different combination of modifications that can occur for reduced disulfides
+        :return:
+        """
+        if self.arr and self.r == True:
+            combo_dict = combination.batch_combos(self.arr, int(self.r))
+        else:
+            combo_dict = {}
         return combo_dict
 
     def update_dict(self):

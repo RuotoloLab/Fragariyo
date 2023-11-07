@@ -4,8 +4,7 @@
     <property name="container">false</property>
     <property name="height">300</property>
     <property name="relief">flat</property>
-    <property name="resizable">none</property>
-    <property name="title" translatable="yes">Fragariyo, version 2.1</property>
+    <property name="title" translatable="yes">Fragariyo, version 2.0</property>
     <property name="width">200</property>
     <child>
       <object class="ttk.Frame" id="Logo_Panel">
@@ -39,7 +38,7 @@
             <property args="" cbtype="simple" name="command" type="command">on_button_about_clicked</property>
             <property name="text" translatable="yes">About</property>
             <layout manager="grid">
-              <property name="column">1</property>
+              <property name="column">2</property>
               <property name="pady">10</property>
               <property name="row">0</property>
               <property name="sticky">ne</property>
@@ -55,6 +54,18 @@
               <property name="pady">10</property>
               <property name="row">0</property>
               <property name="sticky">nw</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Button" id="Button_gui">
+            <property args="" cbtype="simple" name="command" type="command">on_button_gui_clicked</property>
+            <property name="text" translatable="yes">Change GUI Size</property>
+            <layout manager="grid">
+              <property name="column">0</property>
+              <property name="pady">10</property>
+              <property name="row">0</property>
+              <property name="sticky">n</property>
             </layout>
           </object>
         </child>
@@ -209,33 +220,6 @@
             </child>
           </object>
         </child>
-        <child>
-          <object class="ttk.Frame" id="frame4">
-            <property name="height">144</property>
-            <property name="relief">ridge</property>
-            <property name="width">285</property>
-            <layout manager="grid">
-              <property name="column">0</property>
-              <property name="padx">8</property>
-              <property name="pady">5</property>
-              <property name="row">2</property>
-            </layout>
-            <containerlayout manager="grid">
-              <property name="propagate">False</property>
-            </containerlayout>
-            <child>
-              <object class="ttk.Label" id="label5">
-                <property name="image">Capture2.PNG</property>
-                <property name="text" translatable="yes">FargariyoLogo (here)</property>
-                <layout manager="grid">
-                  <property name="column">0</property>
-                  <property name="padx">40</property>
-                  <property name="row">3</property>
-                </layout>
-              </object>
-            </child>
-          </object>
-        </child>
       </object>
     </child>
     <child>
@@ -275,10 +259,29 @@
                 <layout manager="grid">
                   <property name="column">1</property>
                   <property name="ipadx">32</property>
-                  <property name="ipady">20</property>
+                  <property name="ipady">5</property>
                   <property name="padx">25</property>
                   <property name="pady">3</property>
                   <property name="row">2</property>
+                </layout>
+                <containerlayout manager="grid">
+                  <property name="propagate">False</property>
+                </containerlayout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Button" id="Button_datanalysis">
+                <property cbtype="simple" name="command" type="command">on_button_dataanalysis_clicked</property>
+                <property name="compound">left</property>
+                <property name="text" translatable="yes"> Data Analysis</property>
+                <property name="width">5</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="ipadx">34</property>
+                  <property name="ipady">5</property>
+                  <property name="padx">25</property>
+                  <property name="pady">3</property>
+                  <property name="row">4</property>
                 </layout>
                 <containerlayout manager="grid">
                   <property name="propagate">False</property>
@@ -296,44 +299,6 @@ Fragmentation</property>
                   <property name="pady">5</property>
                   <property name="row">0</property>
                 </layout>
-              </object>
-            </child>
-            <child>
-              <object class="ttk.Menubutton" id="TerminalOptions">
-                <property name="direction">below</property>
-                <property name="text" translatable="yes">Data Analysis Options</property>
-                <layout manager="grid">
-                  <property name="column">1</property>
-                  <property name="ipadx">5</property>
-                  <property name="ipady">5</property>
-                  <property name="padx">25</property>
-                  <property name="pady">10</property>
-                  <property name="row">4</property>
-                </layout>
-                <child>
-                  <object class="tk.Menu" id="menu2">
-                    <property name="cursor">man</property>
-                    <property name="tearoff">false</property>
-                    <child>
-                      <object class="tk.Menuitem.Command" id="Menucommand_singleseqcov">
-                        <property cbtype="simple" name="command" type="command">on_singleseqcov_clicked</property>
-                        <property name="label" translatable="yes">Sequence Coverage (singles)</property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="tk.Menuitem.Command" id="Menucommand_comboseqcov">
-                        <property cbtype="simple" name="command" type="command">on_combinedeqcov_clicked</property>
-                        <property name="label" translatable="yes">Sequence Coverage (combined)</property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="tk.Menuitem.Command" id="Menucommand_termFragmenplotterInput">
-                        <property cbtype="simple" name="command" type="command">on_termfragplotterinput_clicked</property>
-                        <property name="label" translatable="yes">Sequence Plot (ClipsMS Style)</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
               </object>
             </child>
           </object>
@@ -390,15 +355,15 @@ Fragmentation</property>
               <object class="ttk.Button" id="Button_internalrun">
                 <property cbtype="simple" name="command" type="command">on_internal_run_clicked</property>
                 <property name="compound">left</property>
-                <property name="text" translatable="yes">IV.II.III Internal Run</property>
+                <property name="text" translatable="yes">IV.II Internal Run</property>
                 <property name="width">5</property>
                 <layout manager="grid">
                   <property name="column">1</property>
-                  <property name="ipadx">40</property>
-                  <property name="ipady">10</property>
+                  <property name="ipadx">28</property>
+                  <property name="ipady">5</property>
                   <property name="padx">25</property>
-                  <property name="pady">10</property>
-                  <property name="row">8</property>
+                  <property name="pady">3</property>
+                  <property name="row">3</property>
                 </layout>
               </object>
             </child>
@@ -412,80 +377,6 @@ Fragmentation</property>
                   <property name="columnspan">3</property>
                   <property name="pady">5</property>
                   <property name="row">0</property>
-                </layout>
-              </object>
-            </child>
-            <child>
-              <object class="ttk.Menubutton" id="menubutton1">
-                <property name="direction">below</property>
-                <property name="text" translatable="yes">Data Analysis Options</property>
-                <layout manager="grid">
-                  <property name="column">1</property>
-                  <property name="ipadx">5</property>
-                  <property name="ipady">5</property>
-                  <property name="padx">25</property>
-                  <property name="pady">10</property>
-                  <property name="row">9</property>
-                </layout>
-                <child>
-                  <object class="tk.Menu" id="menu1">
-                    <property name="cursor">man</property>
-                    <property name="tearoff">false</property>
-                    <child>
-                      <object class="tk.Menuitem.Command" id="Menucommand_mergingInternal">
-                        <property cbtype="simple" name="command" type="command">on_merginginternal_clicked</property>
-                        <property name="label" translatable="yes">Merging Ouputs</property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="tk.Menuitem.Command" id="Menucommand_averagingInternal">
-                        <property cbtype="simple" name="command" type="command">on_averaginginternal_clicked</property>
-                        <property name="label" translatable="yes">Averaging Outputs</property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="tk.Menuitem.Command" id="Menucommand_InternalFragmentPlotter">
-                        <property cbtype="simple" name="command" type="command">on_internfragplotter_clicked</property>
-                        <property name="label" translatable="yes">Internal Frag Sequence Plot (ClipsMS Style)</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-              </object>
-            </child>
-            <child>
-              <object class="ttk.Label" id="label1">
-                <property name="text" translatable="yes">IV.II.I Mass Resolution</property>
-                <layout manager="grid">
-                  <property name="column">1</property>
-                  <property name="row">4</property>
-                </layout>
-              </object>
-            </child>
-            <child>
-              <object class="ttk.Entry" id="massresolution">
-                <property name="justify">left</property>
-                <property name="state">normal</property>
-                <layout manager="grid">
-                  <property name="column">1</property>
-                  <property name="row">5</property>
-                </layout>
-              </object>
-            </child>
-            <child>
-              <object class="ttk.Label" id="label3">
-                <property name="text" translatable="yes">IV.II.II Tolerance Error</property>
-                <layout manager="grid">
-                  <property name="column">1</property>
-                  <property name="row">6</property>
-                </layout>
-              </object>
-            </child>
-            <child>
-              <object class="ttk.Entry" id="toleranceerror">
-                <layout manager="grid">
-                  <property name="column">1</property>
-                  <property name="row">7</property>
                 </layout>
               </object>
             </child>

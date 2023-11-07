@@ -22,59 +22,9 @@ from Parameter_Parser import isotope_xtractor
 import terminalFragmentor_Main as tfm
 
 
-
-
 # Setting up tkinter
 root = tk.Tk()
 root.withdraw()
-
-
-# update Pyteomics masses
-mass.std_ion_comp.update({
-    'M':        mass.Composition(formula=''),
-    'M-H2O':    mass.Composition(formula='H-2O-1'),
-    'M-NH3':    mass.Composition(formula='N-1H-3'),
-    'a':        mass.Composition(formula='H-2O-1' + 'C-1O-1'),
-    'a+1':        mass.Composition(formula='H-2O-1' + 'C-1O-1'+'H1'),
-    'a-H2O':    mass.Composition(formula='H-2O-1' + 'C-1O-1' + 'H-2O-1'),
-    'a-NH3':    mass.Composition(formula='H-2O-1' + 'C-1O-1' + 'N-1H-3'),
-    'b':        mass.Composition(formula='H-2O-1'),
-    'b-H2O':    mass.Composition(formula='H-2O-1' + 'H-2O-1'),
-    'b-NH3':    mass.Composition(formula='H-2O-1' + 'N-1H-3'),
-    'c':        mass.Composition(formula='H-2O-1' + 'NH3'),
-    'c-dot':    mass.Composition(formula='H-2O-1' + 'NH3' + 'H-1'),
-    'c-1':    mass.Composition(formula='H-2O-1' + 'NH3' + 'H1'),
-    'c+1':      mass.Composition(formula='H-2O-1' + 'NH3' + 'H1'),
-    'c+2':      mass.Composition(formula='H-2O-1' + 'NH3' + 'H2'),
-    'c-H2O':    mass.Composition(formula='H-2O-1' + 'NH3' + 'H-2O-1'),
-    'c-NH3':    mass.Composition(formula='H-2O-1'),
-    'x':        mass.Composition(formula='H-2O-1' + 'CO2'),
-    'x-H2O':    mass.Composition(formula='H-2O-1' + 'CO2' + 'H-2O-1'),
-    'x-NH3':    mass.Composition(formula='H-2O-1' + 'CO2' + 'N-1H-3'),
-    'y':        mass.Composition(formula=''),
-    'y-H2O':    mass.Composition(formula='H-2O-1'),
-    'y-NH3':    mass.Composition(formula='N-1H-3'),
-    'z-dot':        mass.Composition(formula='H-2O-1' + 'ON-1H-1'),
-    'z':    mass.Composition(formula='H-2O-1' + 'ON-1'),
-    'z+1':      mass.Composition(formula='H-2O-1' + 'ON-1H1'),
-    'z+2':      mass.Composition(formula='H-2O-1' + 'ON-1H2'),
-    'z+3':      mass.Composition(formula='H-2O-1' + 'ON-1H3'),
-    'z-H2O':    mass.Composition(formula='H-2O-1' + 'ON-1H-1' + 'H-2O-1'),
-    'z-NH3':    mass.Composition(formula='H-2O-1' + 'ON-1H-1' + 'N-1H-3'),
-    'c-z': mass.Composition(formula='H-2O-1' + 'NH3'+'H-2O-1' + 'ON-1'),
-    'c-zdot': mass.Composition(formula='H-2O-1' + 'NH3'+'H-2O-1' + 'ON-1H-1'),
-    'cdot-z': mass.Composition(formula='H-2O-1' + 'NH3' + 'H-1'+'H-2O-1' + 'ON-1'),
-    'c-y': mass.Composition(formula='H-2O-1' + 'NH3'+ ''),
-    'cdot-y': mass.Composition(formula='H-2O-1' + 'NH3' + 'H-1'+''),
-    'a-z': mass.Composition(formula='H-2O-1' + 'C-1O-1' + 'H-2O-1' + 'ON-1'),
-    'a-zdot': mass.Composition(formula='H-2O-1' + 'C-1O-1' + 'H-2O-1' + 'ON-1H-1'),
-    'a-y':mass.Composition(formula='H-2O-1' + 'C-1O-1' + ''),
-    'b-y':mass.Composition(formula='H-2O-1' + ''),
-    'x-c':mass.Composition(formula='H-2O-1' + 'CO2' + 'H-2O-1' + 'NH3'),
-    'x-cdot':mass.Composition(formula='H-2O-1' + 'CO2' + 'H-2O-1' + 'NH3' + 'H-1')
-    })
-
-
 
 
 class interfrag:
@@ -339,7 +289,7 @@ def modificator(residue_dict, mod_ls, charge, var_mods_dict, mz_mono, neutral_mo
 
     return mz_mono, neutral_mono, mods, var_mods_dict
 
-def mass_calc(seq, types, mincharge, maxcharge, dictionary, ss_bonds=None, cysmod_dict = None, cys_num=None, mods_cys = None, cysloc = None, sscount = None, iseqstart=None, iseqend=None, reverse_flag=None, modobj =None, libraryofmods=None):
+def mass_calc(seq, types, maxcharge, dictionary, ss_bonds=None, cysmod_dict = None, cys_num=None, mods_cys = None, cysloc = None, sscount = None, iseqstart=None, iseqend=None, reverse_flag=None, modobj =None, libraryofmods=None):
     """
     Function to calculate masses of specific internal fragments with specific disulfides configurations
     :param seq: str, interfragment sequence
@@ -366,8 +316,8 @@ def mass_calc(seq, types, mincharge, maxcharge, dictionary, ss_bonds=None, cysmo
 
     for ion_type in types:
         # For each charge
-        for charge in range(mincharge, maxcharge + 1):
-
+        for charge in range(maxcharge, maxcharge + 1):
+            # print(f"charge = {charge}")
             #calculate m/z and neutral
             mz_mono_org = mass.fast_mass2(seq, ion_type=ion_type, charge=charge)
             neutral_mono_org = mass.fast_mass2(seq, ion_type=ion_type, charge=0)
@@ -395,7 +345,7 @@ def mass_calc(seq, types, mincharge, maxcharge, dictionary, ss_bonds=None, cysmo
                                                                                  var_mods_dict, mz_mono, neutral_mono,libraryofmods)
 
                         # Removing the hydrogens due to the disulfide bonds
-                        neutral_mono = neutral_mono + sscount * (-1.0078 * 2)
+                        neutral_mono = neutral_mono + (sscount * (-1.0078 * 2))
                         mz_mono = mz_mono + (sscount * ((-1.0078 / charge) * 2))
 
 
@@ -404,7 +354,7 @@ def mass_calc(seq, types, mincharge, maxcharge, dictionary, ss_bonds=None, cysmo
                         mods = []
 
                         # Removing the hydrogens due to the disulfide bonds
-                        neutral_mono = neutral_mono + sscount * (-1.0078 * 2)
+                        neutral_mono = neutral_mono + (sscount * (-1.0078 * 2))
                         mz_mono = mz_mono + (sscount * ((-1.0078 / charge) * 2))
 
                 # If there are disulfides to be modified because their disulfide partner is not in this fragment
@@ -414,24 +364,18 @@ def mass_calc(seq, types, mincharge, maxcharge, dictionary, ss_bonds=None, cysmo
                         mz_mono, neutral_mono, mods, var_mods_dict = modificator(residue_census, modobj, charge,
                                                                                  var_mods_dict, mz_mono, neutral_mono,libraryofmods)
 
-                        # except removing the hydrogens due to the disulfide bonds
-                        neutral_mono = neutral_mono + sscount * (-1.0078 * 2)
-                        mz_mono = mz_mono + (sscount * ((-1.0078 / charge) * 2))
 
                         # Modify neutral mass with the modifications possible
                         # print(f"cysmod_dict = {cysmod_dict}/cys_num = {cys_num}/cysmod_dict[cys_num] = {cysmod_dict[cys_num]}")
-                        neutral_mono = neutral_mono + cysmod_dict[cys_num][mods_cys] + sscount * (-1.0078 * 2)
+                        neutral_mono = neutral_mono + cysmod_dict[cys_num][mods_cys] + (sscount * (-1.0078 * 2))
                         mz_mono = mz_mono + (cysmod_dict[cys_num][mods_cys]/ charge) + (sscount * ((-1.0078 / charge) * 2))
 
                     else:
                         # If the internal fragment contains cysteines for modifications
 
-                        # except removing the hydrogens due to the disulfide bonds
-                        neutral_mono = neutral_mono + sscount * (-1.0078 * 2)
-                        mz_mono = mz_mono + (sscount * ((-1.0078 / charge) * 2))
 
                         # Modify neutral mass with the modifications possible
-                        neutral_mono = neutral_mono + cysmod_dict[cys_num][mods_cys] + sscount * (-1.0078 * 2)
+                        neutral_mono = neutral_mono + cysmod_dict[cys_num][mods_cys] + (sscount * (-1.0078 * 2))
                         mz_mono = mz_mono + (cysmod_dict[cys_num][mods_cys] / charge) + (
                                 sscount * ((-1.0078 / charge) * 2))
 
@@ -503,17 +447,13 @@ def mass_calc(seq, types, mincharge, maxcharge, dictionary, ss_bonds=None, cysmo
 
 
 
-
-
-
-def ifragments(analysis_name, sequence, types=('b', 'y'), mincharge = 0, maxcharge=1, maxstart = 4, maxlength=10,
-               modbool = None, max_mods=1, combo_dict = None, cystine = None, uniprot_offset=None, allow_ssbroken = None,
-               reverse_seq=None, foo_ls=None, reduced_cys=None, modsdictio=None):
+def ifragments(analysis_name, sequence, types=('b', 'y'), maxcharge=1, maxstart = 4, maxlength=10,
+               modbool = None, combo_dict = None, cystine = None, uniprot_offset=None, allow_ssbroken = None,
+               reverse_seq=None, foo_ls=None, reduced_cys=None, modsdictio=None, fragmentmode=None):
     """
     :param analysis_name: Str, the name of the current analysis or pass
     :param sequence: a string of the sequence desired to fragment.
     :param types: the ion types like b or y. To pass more than one type of ion put them in parenthesis
-    :param mincharge:
     :param maxcharge: the maximun charge for the fragments.
     :param maxstart: int, the smallest internal fragment size (number of residues)
     :param maxlength: int, the largest internal fragment size (number of residues)
@@ -528,6 +468,7 @@ def ifragments(analysis_name, sequence, types=('b', 'y'), mincharge = 0, maxchar
     :param foo_ls: Disulfide ls
     :return: A dictionary with neutral masses as keys and interobj as values
     """
+
     print('---------Fragmentation starts--------')
     all_start = time.time()
 
@@ -541,7 +482,7 @@ def ifragments(analysis_name, sequence, types=('b', 'y'), mincharge = 0, maxchar
     for i in range(1, len(isequence)):
 
         #Proline effect
-        if isequence[i] == "P":
+        if isequence[i] == "P" and fragmentmode != "CID":
             continue
         else:
 
@@ -601,8 +542,10 @@ def ifragments(analysis_name, sequence, types=('b', 'y'), mincharge = 0, maxchar
                 # foos_ls is the list of disulfide bond pairs from uniprot
                 for pair in foo_ls:
                     if pair.issubset(cysloc):
-                        # print(disulfide)
+                        # print(pair)
                         disulfide_counter += 1
+
+                # print(disulfide_counter)
 
 
 
@@ -641,7 +584,7 @@ def ifragments(analysis_name, sequence, types=('b', 'y'), mincharge = 0, maxchar
 
                         if combo_dict[unboundcys]:
                             for cysmod in combo_dict[unboundcys]:
-                                mass_calc(iseq, types, mincharge, maxcharge, global_dict, ss_bonds=True,
+                                mass_calc(iseq, types, maxcharge, global_dict, ss_bonds=True,
                                           cysmod_dict=combo_dict, mods_cys=cysmod,
                                           cys_num=unboundcys, cysloc=cysloc, sscount=disulfide_counter,
                                           iseqstart=iseqstart,
@@ -655,7 +598,7 @@ def ifragments(analysis_name, sequence, types=('b', 'y'), mincharge = 0, maxchar
 
                     else:
 
-                        mass_calc(iseq, types, mincharge, maxcharge, global_dict, ss_bonds=True,
+                        mass_calc(iseq, types, maxcharge, global_dict, ss_bonds=True,
                                       cysmod_dict=combo_dict, mods_cys=None,
                                       cys_num=0, cysloc=cysloc, sscount=disulfide_counter, iseqstart=iseqstart,
                                       iseqend=iseqend, reverse_flag=reverse_seq, modobj=modbool,libraryofmods=modsdictio)
@@ -668,7 +611,7 @@ def ifragments(analysis_name, sequence, types=('b', 'y'), mincharge = 0, maxchar
                 if unboundcys > 0:
 
                     for cysmod in combo_dict[unboundcys]:
-                        mass_calc(iseq, types, mincharge, maxcharge, global_dict, ss_bonds=True, cysmod_dict=combo_dict,
+                        mass_calc(iseq, types, maxcharge, global_dict, ss_bonds=True, cysmod_dict=combo_dict,
                                   mods_cys=cysmod,
                                   cys_num=unboundcys, cysloc=cysloc, sscount=disulfide_counter, iseqstart=iseqstart,
                                   iseqend=iseqend, reverse_flag=reverse_seq,libraryofmods=modsdictio)
@@ -676,7 +619,7 @@ def ifragments(analysis_name, sequence, types=('b', 'y'), mincharge = 0, maxchar
 
                 else:
 
-                    mass_calc(iseq, types, mincharge, maxcharge, global_dict, ss_bonds=True,
+                    mass_calc(iseq, types, maxcharge, global_dict, ss_bonds=True,
                               cysmod_dict=combo_dict, mods_cys=None,
                               cys_num=unboundcys, cysloc=cysloc, sscount=disulfide_counter, iseqstart=iseqstart,
                               iseqend=iseqend, reverse_flag=reverse_seq,libraryofmods=modsdictio)
@@ -686,13 +629,13 @@ def ifragments(analysis_name, sequence, types=('b', 'y'), mincharge = 0, maxchar
                 # print("Not Considering Cysteines!")
                 if len(modbool) >=1:
                     # print("Considering modifications!")
-                    mass_calc(iseq, types, mincharge, maxcharge, global_dict, ss_bonds=0, cysmod_dict=0,
+                    mass_calc(iseq, types, maxcharge, global_dict, ss_bonds=0, cysmod_dict=0,
                               cys_num=0, cysloc=0, sscount=0, iseqstart=iseqstart, iseqend=iseqend, reverse_flag=reverse_seq,
                               modobj=modbool,libraryofmods=modsdictio)
                     counter += 1
                 else:
                     # print("Regular primary sequence!")
-                    mass_calc(iseq, types, mincharge, maxcharge, global_dict, ss_bonds=0, cysmod_dict=0,
+                    mass_calc(iseq, types, maxcharge, global_dict, ss_bonds=0, cysmod_dict=0,
                               cys_num=0, cysloc=0, sscount=0, iseqstart=iseqstart, iseqend=iseqend,
                               reverse_flag=reverse_seq,libraryofmods=None)
                     counter += 1
@@ -711,7 +654,8 @@ def fragments_to_picklefile(file_title, fragments_dict):
     Save the fragment function as a binary file
     :return:
     """
-    outname = file_title + ".theofrags"
+    print(f"file_title = {file_title}")
+    outname = file_title.replace(".csv",".theofrags")
     with open(outname, 'wb') as picklefile:
         pickle.dump(fragments_dict, picklefile)
 
@@ -722,8 +666,8 @@ def fragments_to_FRAGSfile(file_title, fragments):
     :param fragments: Str, a string with the fragments
     :return: void
     """
-
-    output = open(str(file_title) + '.txt.frags', 'w')
+    outname = file_title.replace(".csv", ".txt.frags")
+    output = open(outname, 'w')
     output.write(fragments)
     output.close()
 
@@ -759,31 +703,90 @@ def unmatched_expions_outfile_writer(exp_ion_list, output_filename, csv = False)
         outnamefile = output_filename.strip(".csv")
         tfm.save_fragments(exp_ion_list, outnamefile + ".unmatched")
 
-def internal_main_batch_multipass(main_outdir,repoofmods):
+
+def intern_multipass_batchparser(batch_file):
+
+    masterlist = []
+    workingdir = ''
+    with open(batch_file, 'r') as pfile:
+
+        indx = 0
+        for line in list(pfile):
+
+            if indx == 0:
+                splits = line.rstrip('\n').split(',')
+                workingdir = splits[0]
+                print(workingdir)
+                indx += 1
+
+            else:
+                if line.startswith('#'):
+                    indx += 1
+                else:
+                    line_ls = []
+                    print(line)
+                    splits = line.rstrip('\n').split(',')
+                    expionfile = splits[0]
+                    expionpath = os.path.join(workingdir,expionfile)
+                    line_ls.append(expionpath)
+                    ionsfile = splits[1]
+                    if ionsfile == "":
+                        line_ls.append("")
+                    else:
+                        ionpath = os.path.join(workingdir, ionsfile)
+                        line_ls.append(ionpath)
+                    paramsfile = splits[2]
+                    if paramsfile == "":
+                        line_ls.append("")
+                    else:
+                        parampath = os.path.join(workingdir, paramsfile)
+                        line_ls.append(parampath)
+
+                    masterlist.append(line_ls)
+
+                    indx += 1
+
+    print(masterlist)
+    return masterlist
+
+
+def internal_main_batch_multipass(main_outdir,repoofmods, massresolution, error_ppm):
     """
     Main method to run several analysis with several passes for one experimental ion file
     The ions that are matched will not be considered for matching in consecutive passes
     :return: void
     """
-    expfiles = filedialog.askopenfilenames(title='Load Experimental masses', filetypes=[('CSV', '.csv')])
 
-    for file_index, exp_file in enumerate(expfiles):
-        print('Searching file {} of {}...'.format(file_index + 1, len(expfiles)))
+    #Parse Batch File
+    batchfile = filedialog.askopenfilename(title='Load Batch File', filetypes=[('CSV', '.csv')])
+    filestorun = intern_multipass_batchparser(batchfile)
+
+
+    # expfiles = filedialog.askopenfilename(title='Load Experimental masses', filetypes=[('CSV', '.csv')])
+
+    for expindx, explist in enumerate(filestorun):
+        exp_file = explist[0]
+        exp_name = exp_file.split("\\")
+        print('Searching file {}, number {} of {}...'.format(exp_name[-1], expindx+1, len(filestorun)))
         #Parse experimental ions
         org_expions, proteinName = expion_parser(exp_file)
 
         #Use previously created fragments
-        load_ions_bool = messagebox.askyesno('Load Ions File?',
-                                             'Do you want to load an existing .theofrags file (or calculate theoretical ions fresh from a template file)? Choose YES to load .ions file or NO to open a parameter template')
+        # load_ions_bool = messagebox.askyesno('Load Ions File?',
+        #                                      'Do you want to load an existing .theofrags file (or calculate theoretical ions fresh from a template file)? Choose YES to load .ions file or NO to open a parameter template')
+
+        load_ions_bool = explist[1]
 
         # A dict of analysis. Each one has a list of passes
         analysis_dict = {}
 
         # A dict of analysis. Each one hasdictionary of passes
         # analysis_dict_rev = {}
-
+        paramobj_dict = ''
+        param_name = ''
         if load_ions_bool:
-            theofrags_file = filedialog.askopenfilename(title='Choose Ions File', filetypes=[('Theoretical Fragments File', '.theofrags')])
+            # theofrags_file = filedialog.askopenfilename(title='Choose Ions File', filetypes=[('Theoretical Fragments File', '.theofrags')])
+            theofrags_file = load_ions_bool
             with open(theofrags_file, 'rb') as picklefile:
                 analysis_dict = pickle.load(picklefile)
 
@@ -792,19 +795,19 @@ def internal_main_batch_multipass(main_outdir,repoofmods):
             # with open(revtheofrags_file, 'rb') as revpicklefile:
             #     analysis_dict_rev = pickle.load(revpicklefile)
 
-
-
-
         else:
-
+            print("No ions file given, therefore moving on to obtaining params file!")
+            param_file = explist[2]
             # Load theoretical database parameters
-            paramfile = filedialog.askopenfilename(title='Load Parameter File', filetypes=[('CSV', '.csv')])
-            paramobj_dict = Parameter_Parser.parse_param_template_batch_multipass(paramfile)
-            print(paramobj_dict)
+            if param_file:
+                # paramfile = filedialog.askopenfilename(title='Load Parameter File', filetypes=[('CSV', '.csv')])
+                paramobj_dict = Parameter_Parser.parse_param_template_batch_multipass(param_file)
+                param_name = param_file.split("\\")
+                print(f"Creating database using file = {param_name[-1]}")
 
 
             for analysis in paramobj_dict:
-                print(f"Current Analysis = {analysis} of {len(paramobj_dict)}")
+                print(f"Current Analysis = {analysis}")
                 #Alwasy reset to this output path so that all passes are saved under one folder
                 os.chdir(main_outdir)
 
@@ -820,16 +823,15 @@ def internal_main_batch_multipass(main_outdir,repoofmods):
 
                     # It actually returns a tuple with the analysis name in first position then the fragments dictionary
                     frag_dict = ifragments(analysis_name=paramobj.analysisName, sequence=proteinSeq, types=paramobj.iontypes,
-                                           mincharge=paramobj.mincharge,
                                            maxcharge=paramobj.maxcharge,
                                            maxstart=paramobj.min_len, maxlength=paramobj.max_len,
-                                           modbool=paramobj.noncysmods, max_mods=0,
+                                           modbool=paramobj.noncysmods,
                                            combo_dict=paramobj.combodict_calc(),
                                            cystine=paramobj.disulfide_bool,
                                            uniprot_offset=paramobj.uniprot_offset,
                                            allow_ssbroken=paramobj.ss_allowbroken,
                                            reverse_seq=False, foo_ls=paramobj.disulfide_ls,
-                                           reduced_cys=paramobj.naturally_redcys, modsdictio=repoofmods)
+                                           reduced_cys=paramobj.naturally_redcys, modsdictio=repoofmods, fragmentmode=paramobj.fragmentchem)
                     passes_dict[paramobj.analysisName] = frag_dict
 
                 analysis_dict[analysis] = []
@@ -841,12 +843,15 @@ def internal_main_batch_multipass(main_outdir,repoofmods):
                 try:
                     os.mkdir(out_folder_str)
                 except FileExistsError:
-                    out_folder_str = out_folder_str + "(1)"
+                    out_folder_str = out_folder_str + "_(1)"
                     os.mkdir(out_folder_str)
 
-                os.chdir(main_outdir + f"/{out_folder_str}")
-                fragments_to_picklefile(f"{out_folder_str}", analysis_dict)
-                fragments_to_FRAGSfile(f"{out_folder_str}", str(analysis_dict))
+
+                print(f"param_name[-1] = {param_name[-1]}")
+                fragments_to_picklefile(f"{param_name[-1]}", analysis_dict)
+                fragments_to_FRAGSfile(f"{param_name[-1]}", str(analysis_dict))
+
+                os.chdir(out_folder_str)
 
             # print(f'analysis_dict = {analysis_dict}')
 
@@ -895,14 +900,14 @@ def internal_main_batch_multipass(main_outdir,repoofmods):
 
 
                 try:
-                    os.chdir(main_outdir + f"/{proteinName}_{analysis_num}")
+                    os.chdir(f"{proteinName}_{analysis_num}")
                 except FileNotFoundError:
-                    os.mkdir(main_outdir + f"/{proteinName}_{analysis_num}")
-                    os.chdir(main_outdir + f"/{proteinName}_{analysis_num}")
+                    os.mkdir(f"{proteinName}_{analysis_num}")
+                    os.chdir(f"{proteinName}_{analysis_num}")
 
 
                 print(f"analysis_dict = {analysis_dict.keys()}")
-                matched_expions = matchmaker2_multipass(analysis_dict[analysis_num][1][pass_label], analysis_expions, 10,analysis_dict[analysis_num][0])
+                matched_expions = matchmaker2_multipass(analysis_dict[analysis_num][1][pass_label], analysis_expions, massresolution, error_ppm,analysis_dict[analysis_num][0])
                 #Removing matched ions from futures passes
                 for ion in matched_expions:
                     if ion in analysis_expions:

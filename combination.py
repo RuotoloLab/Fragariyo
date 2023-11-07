@@ -85,17 +85,25 @@ def batch_combos(arr, r):
 if __name__ == "__main__":
 
     #Disulfide breakage modifications
-    arr = ['sh','shl','chhsshl', 'h', 'hl', 'hemeC-h', 'hemeC-2h']
-    r = 7
-    print (rSubset(arr, r))
+    # arr = ['sh','shl','chhsshl', 'h', 'hl', 'hemeC-h', 'hemeC-2h']
+    # r = 7
+
+    # combos = rSubset_rep(arr, r)
+    # for x in combos:
+    #     print(x)
+    #
+    # combo_masses(combos)
+    #
+    #
+    # batch_combos(arr, r)
+
+    # Combinations of modifications to be removed from PSMs counts
+    arr = [1,2,3,4]
+    # arr = ['C(57.0214)', 'N-term(42.0106)', 'N-term(229.1629)', 'K(229.1629)']
+    r = 4
+    print(rSubset(arr, r))
     print(rSubset_rep(arr, r))
 
+    for i in range(5):
+        print(rSubset_rep(arr, i))
 
-    combos = rSubset_rep(arr, r)
-    for x in combos:
-        print(x)
-
-    combo_masses(combos)
-
-
-    batch_combos(arr, r)

@@ -12,49 +12,60 @@ import pickle
 ppos = {'Analysis Num':0,
         'Analysis Name': 1,
         'seq': 2,
-        'iontypes': 3,
-        'maxcharge': 4,
-        'neutral_loss_bool':5,
-        'disulfides': 6,
-        'mods_array': 7,
-        'r': 8,
-        'uniprot_offset': 9,
-        'ss_allowbroken': 10,
-        'disulfides_ls': 11,
-        'naturally_redcys':12,
-        'mod_bool': 13,
-        'noncys_mods': 14,
-        'init_tol':15,
-        'final_tol':16,
-        'cal_bool':17
+        'frag_chem':3,
+        'iontypes': 4,
+        'maxcharge': 5,
+        'neutral_loss_bool':6,
+        'disulfides': 7,
+        'mods_array': 8,
+        'r': 9,
+        'uniprot_offset': 10,
+        'ss_allowbroken': 11,
+        'disulfides_ls': 12,
+        'naturally_redcys':13,
+        'mod_bool': 14,
+        'noncys_mods': 15,
+        'init_tol':16,
+        'final_tol':17,
+        'cal_bool':18
         }
 
 
-TERMIONS = ['c', 'c-dot', 'z', 'z-dot', 'x', 'a', 'b', 'y']
+TERMIONSECD = ['c', 'c-1', 'z+1', 'zdot', 'adot', 'b', 'y']
+TERMIONSCID = ['a', 'b', 'y']
 
 
 def parse_disulf_ls(disulf_str, uniprot_offset):
     """
-    Parse the disulfide list in the parameter file
-    :param disulf_str: str, parsed from template file
-    :param uniprot_offset: int, from template file
-    :return: disulf_str modified with the uniprot offset so disulfide bond determination is correct
+    :param disulf_str: a list of strings of cysteine location involve in disulfide bonds (e.g ['15-18', ''])
+    :return: A list of cystine locations that are involve in disulfide bonds (set), e.g. [{18, 15}]
     """
 
     spl = disulf_str.split(";")
 
-    # print(spl)
+    print(spl)
     ssls = []
     for ssbond in spl:
-        # print(ssbond)
-        enlace = ssbond.split("-")
-        bondset = set()
-        for num in enlace:
-            intnum = int(num) - uniprot_offset
-            bondset.add(intnum)
+        if ssbond == '':
+            continue
+        else:
+            # print(ssbond)
+            enlace = ssbond.split("-")
+            bondset = set()
+            for num in enlace:
+                #If statement helps to get rid off and empty set
+                if num:
+                    # print(f"num = {num}")
+                    # print(f"num type = {type(num)}")
+                    intnum = int(num) - uniprot_offset
+                    bondset.add(intnum)
+                    # print(f"bondset = {bondset}")
+                # else:
+                #     print("Not a number!")
+
         ssls.append(bondset)
 
-    # print(ssls)
+    # print(f"ssls = {ssls}")
     return ssls
 
 
@@ -111,10 +122,22 @@ def parse_param_template_batch_multipass(param_file):
             # print(iontypes_str)
             iontypes_strsplit = iontypes_str.split(';')
 
-            for ion in TERMIONS:
-                for type in iontypes_strsplit:
-                    if ion[0] == type:
-                        iontypes_ls.append(ion)
+
+            fragmentation_type = splits[ppos["frag_chem"]]
+
+            if fragmentation_type == "CID":
+                for ion in TERMIONSCID:
+                    for type in iontypes_strsplit:
+                        if ion[0] == type:
+                            iontypes_ls.append(ion)
+
+            elif fragmentation_type == "ECD" or fragmentation_type == "ETD":
+                for ion in TERMIONSECD:
+                    for type in iontypes_strsplit:
+                        if ion[0] == type:
+                            iontypes_ls.append(ion)
+            else:
+                print("Only CID and ECD/ETD are currently supported!")
 
             print(iontypes_ls)
             params.iontypes = iontypes_ls
@@ -559,12 +582,20 @@ def csvfile_parser(csv_file):
 
             # print(arg_list)
             # re-organize arg list to match expected input format
-            ordered_list = [arg_list[0], arg_list[2], "", "", arg_list[1], "", ""]
 
-            # create a new exp cluster object using the input data from this line and append it to the peak_list
-            peak = ExpIon(ordered_list, True)
+            charge = arg_list[1]
 
-            peak_list.append(peak)
+            if str(int(charge)).isnumeric():
+                ordered_list = [arg_list[0], arg_list[2], "", "", charge, "", ""]
+
+                # create a new exp cluster object using the input data from this line and append it to the peak_list
+                peak = ExpIon(ordered_list, True)
+
+                peak_list.append(peak)
+
+            else:
+                print(f"The charge values are no numeric! Please check the column format of the experimental ion CSV")
+                break
 
     return peak_list
 

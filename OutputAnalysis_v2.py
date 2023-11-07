@@ -393,6 +393,77 @@ def average_main(batch = False):
 
         averaging_files(hitsfiles, outdir, output_title)
 
+def main_ecdciu_plots(files, iontype_exclusion = None):
+    """
+    Run sequence coverage analysis on the provided list of .hits files
+    :param files: (list of strings) full system paths to .hits files to analyze
+    :param extension: output plot extension (e.g. '.png)
+    :return: void
+    """
+    # outputdir = os.path.dirname(files[0])
+    # It used to set the input directory as the output directory...Me no like it
+    # It gets too confusing. Modified to code so the user can choose the output directory
+
+
+    outputdir = filedialog.askdirectory(title='Choose Output Folder')
+    os.chdir(outputdir)
+
+    output_header = 'Sample name, seq_cov, max_int, N_Sites, C_Sites\n'
+
+    # plt.clf()
+    plt.figure(dpi=300)
+
+    fig, ax = plt.subplots(nrows=len(files), ncols=1, sharex=True,sharey=True)
+    subplot = 0
+    for index, hits_file in enumerate(files):
+        print('analyzing file {} of {}'.format(index + 1, len(files)))
+        sitelist = load_hits_file(hits_file)
+        protein_seq = get_protein_seq(sitelist)
+
+        output_filename = os.path.basename(hits_file).rstrip('.hits')
+        csv_filepath = os.path.join(outputdir, output_filename + '_analysis.csv')
+
+        # Compute sequence coverage percentage, need to set seqcovnum argument in general_seq_plot
+        seqcovnum, Nindxs, Cindxs, totalsitesnum = seq_cov_number(protein_seq, sitelist)
+
+        # Compute sequence coverage and plot/write to file
+        n_ints, c_ints, max_int = compute_seq_cov(protein_seq, sitelist, norm=True,
+                                                  iontype_exclusion=iontype_exclusion, cz_iontypes_only=False)
+        datalists = [n_ints, c_ints]
+        labels = ['n','c']
+
+        indices = np.arange(0, len(datalists[0]))
+        index = 0
+        for data in datalists:
+            if index == 0:
+                ax[subplot].bar(indices, data, label=labels[index])
+            else:
+
+                    # need to sum all previously plotted lists to get correct bottom coordinates
+                    summedlist = [sum(x) for x in zip(*datalists[0:index])]
+                    ax[subplot].bar(indices, data, label=labels[index], bottom=summedlist)
+            index += 1
+
+
+
+        ax[len(files)-1].set_xlabel("Sequence Position")
+        ax[len(files)-1].set_ylabel("Norm. Int")
+        ax[subplot].set_title(output_filename)
+
+        # plotitle = output_filename
+        #
+        # plt.title(plotitle)
+
+        plt.legend(loc='best')
+
+        # plotname = plotitle + ".png"
+        # plotfilename = os.path.join(outputdir, plotname)
+
+        subplot+=1
+    plt.savefig("testing.png")
+    plt.close()
+
+
 
 def main_seq_cov(files, outputdir, extension='.png', iontype_exclusion=False, errors=False, outfile = False, outfile_extension=None, cz_iontypes_only=False):
     """
@@ -422,7 +493,7 @@ def main_seq_cov(files, outputdir, extension='.png', iontype_exclusion=False, er
         seqcovnum, Nindxs, Cindxs, totalsitesnum = seq_cov_number(protein_seq, sitelist)
 
         # Compute sequence coverage and plot/write to file
-        n_ints, c_ints, max_int = compute_seq_cov(protein_seq, sitelist,  norm = False, iontype_exclusion=iontype_exclusion, cz_iontypes_only=cz_iontypes_only)
+        n_ints, c_ints, max_int = compute_seq_cov(protein_seq, sitelist,  norm = True, cz_iontypes_only=cz_iontypes_only)
 
         #Get list of indeces ready for .csv
         n_sites = ';'.join(map(str, Nindxs))
@@ -734,7 +805,7 @@ def unpack_hitsfile(files):
 
     return sitelist1, protein_seq1, output_filename1, sitelist2, protein_seq2, output_filename2
 
-def compute_seq_cov(protein_seq, site_list, norm=False, iontype_exclusion=False, cz_iontypes_only=False):
+def compute_seq_cov(protein_seq, site_list, norm=False, cz_iontypes_only=False):
     """
     Compute and plot sequence coverage for a protein sequence given experimental hit list.
     :param protein_seq: protein amino acid sequence string
@@ -743,7 +814,7 @@ def compute_seq_cov(protein_seq, site_list, norm=False, iontype_exclusion=False,
     :return: n-terminal normalized intensities, c-terminal normalized intensities. Both in lists from n-terminal (ready
     for plotting).
     """
-    bad_iontypes = ["z+1", "z+2", "z+3", "z-H2O", "x-H2O", "c-H2O", "z-NH3", "c-NH3", "x-NH3"]
+    bad_iontypes = ["z+2", "z+3", "z-H2O", "x-H2O", "c-H2O", "z-NH3", "c-NH3", "x-NH3"]
     cz_iontypes = ['z', 'c']
     # find max intensity for normalization
     max_int = get_max_int(site_list)
@@ -758,16 +829,24 @@ def compute_seq_cov(protein_seq, site_list, norm=False, iontype_exclusion=False,
 
         # get total intensity at this site and normalize it against max found in any site
         total_int = 0
-
+        hitcharge = 0
         for hit in site.hits:
-            if iontype_exclusion:
-                if hit.thy_ion.iontype not in bad_iontypes:
-                    total_int += float(hit.exp_ion.pkar_cluster)
-            elif cz_iontypes_only:
+            currentcharge= hit.thy_ion.charge
+
+            if cz_iontypes_only:
                 if hit.thy_ion.iontype[0] in cz_iontypes:
-                    total_int += float(hit.exp_ion.pkar_cluster)
+                    if hitcharge == currentcharge:
+                        continue
+                    else:
+                        total_int += float(hit.exp_ion.pkar_cluster)
             else:
-                total_int += float(hit.exp_ion.pkar_cluster)
+                if hitcharge == currentcharge:
+                    continue
+                else:
+                    total_int += float(hit.exp_ion.pkar_cluster)
+
+            hitcharge = hit.thy_ion.charge
+
 
         if not norm:
             normed_int = total_int
@@ -1241,7 +1320,7 @@ def seq_cov_number(protein_seq, site_list, iontype_exclusion=False):
     :param site_list: list of FragmtSite objects containing hit information
     :return: percent of sequence coverage, number of fragsites/number of peptidebonds*100. It automatically filters extra ion types
     """
-    bad_iontypes = ["z+1", "z+2", "z+3", "z-H2O", "x-H2O", "c-H2O", "z-NH3", "c-NH3", "x-NH3"]
+    bad_iontypes = [ "z+2", "z+3", "z-H2O", "x-H2O", "c-H2O", "z-NH3", "c-NH3", "x-NH3"]
     # initialize counter of FragmentSites with hits
     hitcount = 0
     #Creating list to store the seq_index of each hit
@@ -1485,8 +1564,8 @@ def intensity_tracking(files, outputdir):
     :return: percent of sequence coverage, number of fragsites/number of peptidebonds*100. It automatically filters extra ion types
     """
     output_header = ',mz_mono, intensities\n'
-    output_str = f"{output_header}"
 
+    filenames = ''
     Cdict = {}
     Ndict = {}
     for index, hits_file in enumerate(files):
@@ -1496,14 +1575,14 @@ def intensity_tracking(files, outputdir):
         protein_seq = get_protein_seq(site_list)
 
         output_filename = os.path.basename(hits_file).rstrip('.hits')
+        filenames += f",{output_filename}"
         csv_filepath = os.path.join(outputdir, output_filename + '_intanalysis.csv')
-        #Creating list to store the seq_index of each hit
-
+        # Creating list to store the seq_index of each hit
 
         for site in site_list:
 
             # For n-terminal fragments: If the Fragsite has at least one hit, it is added to the hit counter, also its
-            #seq_index is added so that the hits from the c-term that were already covered by a n-term-fragment are not added
+            # seq_index is added so that the hits from the c-term that were already covered by a n-term-fragment are not added
             if site.term == 'N' and len(site.hits) != 0:
                 # print(f" N site hits = {site.hits}")
                 if site.get_seq_index(len(protein_seq)) in Ndict:
@@ -1520,11 +1599,10 @@ def intensity_tracking(files, outputdir):
                         sitedictN[hit.thy_ion.mz_mono][index + 1] = hit.exp_ion.pkar_cluster
                     else:
                         sitedictN[hit.thy_ion.mz_mono] = {}
-                        for i in range(1,index + 1):
+                        for i in range(1, index + 1):
                             # print(i)
                             sitedictN[hit.thy_ion.mz_mono][i] = 0
                         sitedictN[hit.thy_ion.mz_mono][index + 1] = hit.exp_ion.pkar_cluster
-
 
             if site.term == "C" and len(site.hits) != 0:
                 if site.get_seq_index(len(protein_seq)) in Cdict:
@@ -1537,7 +1615,7 @@ def intensity_tracking(files, outputdir):
                         sitedictC[hit.thy_ion.mz_mono][index + 1] = hit.exp_ion.pkar_cluster
                     else:
                         sitedictC[hit.thy_ion.mz_mono] = {}
-                        for i in range(1,index + 1):
+                        for i in range(1, index + 1):
                             # print(i)
                             sitedictC[hit.thy_ion.mz_mono][i] = 0
                         sitedictC[hit.thy_ion.mz_mono][index + 1] = hit.exp_ion.pkar_cluster
@@ -1562,14 +1640,14 @@ def intensity_tracking(files, outputdir):
     #         for feature in Cdict[site][hit]:
     #             output_str += f"{Cdict[site][hit][feature]},"
 
-    output_str += f"NTerm\n"
+    output_str = f"{output_header},{filenames}"
+    output_str += f"\nNTerm\n"
     for site in Ndict:
         # output_str += f"\n{site},"
         for hit in Ndict[site]:
             output_str += f"\n{site},{hit},"
             for feature in Ndict[site][hit]:
                 output_str += f"{Ndict[site][hit][feature]},"
-
 
     output_str += f"\nCTerm\n"
     for site in Cdict:
@@ -2068,13 +2146,14 @@ if __name__ == '__main__':
     #
     #
     #Fucntions to obtain seqeunce information
-    # frips_main_seq_cov(hitsfiles, seqcov=True, seqcov_iontype=False, combination=False)
-    frips_main_seq_cov(hitsfiles, termi_frags_stats=True)
+    frips_main_seq_cov(hitsfiles, seqcov=True, seqcov_iontype=False, combination=False)
+    # frips_main_seq_cov(hitsfiles, termi_frags_stats=True)
     # frips_main_seq_cov(hitsfiles, intenanalysis=True)
     # average_unmatched(unmatchfiles)
     # merging_interalfrag_tsv(tsvfiles, avg = True)
 
-    #
+    #CIUECD
+    # main_ecdciu_plots(hitsfiles)
     # ClipsMS_FragmentorPipe(hitsfiles)
     #
     # inputfiles = filedialog.askopenfilenames(title='Load Hits Files', filetypes=[('CSV', '_clipsfig3.csv'),('Internal Fragments', '.tsv')])

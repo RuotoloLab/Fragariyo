@@ -3,14 +3,93 @@ Author: Carolina Rojas Ramirez
 Date: May 13, 2020
 Python module with all the function needed for Peak Matching using the Fragmentor and the terminalFragmentor
 """
+import os
 import scipy
 import numpy as np
 from scipy import signal
 from pyteomics import mass
+from pyteomics import parser
 from matplotlib import pyplot as plt
 from brainpy import isotopic_variants
 import pythoms.molecule as pythmole
 from Modifications import mods_repo
+
+iontypedict = {
+    'M': mass.Composition(formula=''),
+    'M-H2O': mass.Composition(formula='H-2O-1'),
+    'M-NH3': mass.Composition(formula='N-1H-3'),
+    'a': mass.Composition(formula='H-2O-1' + 'C-1O-1'),
+    'adot': mass.Composition(formula='H-2O-1' + 'C-1O-1' + 'H1'),
+    'a-H2O': mass.Composition(formula='H-2O-1' + 'C-1O-1' + 'H-2O-1'),
+    'a-NH3': mass.Composition(formula='H-2O-1' + 'C-1O-1' + 'N-1H-3'),
+    'b': mass.Composition(formula='H-2O-1'),
+    'b-H2O': mass.Composition(formula='H-2O-1' + 'H-2O-1'),
+    'b-NH3': mass.Composition(formula='H-2O-1' + 'N-1H-3'),
+    'c': mass.Composition(formula='H-2O-1' + 'NH3'),
+    'c-1': mass.Composition(formula='H-2O-1' + 'NH3' + 'H-1'),
+    'c-dot': mass.Composition(formula='H-2O-1' + 'NH3' + 'H1'),
+    'c+1': mass.Composition(formula='H-2O-1' + 'NH3' + 'H1'),
+    'c+2': mass.Composition(formula='H-2O-1' + 'NH3' + 'H2'),
+    'c-H2O': mass.Composition(formula='H-2O-1' + 'NH3' + 'H-2O-1'),
+    'c-NH3': mass.Composition(formula='H-2O-1'),
+    'x': mass.Composition(formula='H-2O-1' + 'CO2'),
+    'x-H2O': mass.Composition(formula='H-2O-1' + 'CO2' + 'H-2O-1'),
+    'x-NH3': mass.Composition(formula='H-2O-1' + 'CO2' + 'N-1H-3'),
+    'y': mass.Composition(formula=''),
+    'y-H2O': mass.Composition(formula='H-2O-1'),
+    'y-NH3': mass.Composition(formula='N-1H-3'),
+    'z': mass.Composition(formula='H-2O-1' + 'ON-1H-1'),
+    'z-dot': mass.Composition(formula='H-2O-1' + 'ON-1'),
+    'z+1': mass.Composition(formula='H-2O-1' + 'ON-1H1'),
+    'z+2': mass.Composition(formula='H-2O-1' + 'ON-1H2'),
+    'z+3': mass.Composition(formula='H-2O-1' + 'ON-1H3'),
+    'z-H2O': mass.Composition(formula='H-2O-1' + 'ON-1H-1' + 'H-2O-1'),
+    'z-NH3': mass.Composition(formula='H-2O-1' + 'ON-1H-1' + 'N-1H-3'),
+    'c-z':mass.Composition(formula='H-2O-1' + 'NH3' + 'H-2O-1' + 'ON-1H-1'),
+    'c-zdot': mass.Composition(formula='H-2O-1' + 'NH3' + 'H-2O-1' + 'ON-1'),
+    'c-z+1': mass.Composition(formula='H-2O-1' + 'NH3' + 'H-2O-1' + 'ON-1H1'),
+    'c-y': mass.Composition(formula='H-2O-1' + 'NH3' + ''),
+    'cdot-y': mass.Composition(formula='H-2O-1' + 'NH3' + 'H-1' + ''),
+    'adot-z': mass.Composition(formula='H-2O-1' + 'C-1O-1' + '1H' + 'H-2O-1' + 'ON-1H-1'),
+    'adot-zdot': mass.Composition(formula='H-2O-1' + 'C-1O-1' + '1H' + 'H-2O-1' + 'ON-1'),
+    'adot-z+1': mass.Composition(formula='H-2O-1' + 'C-1O-1' + '1H' + 'H-2O-1' + 'ON-1H1'),
+    'a-y': mass.Composition(formula='H-2O-1' + 'C-1O-1' + ''),
+    'b-y': mass.Composition(formula='H-2O-1' + ''),
+    'adot-y': mass.Composition(formula='H-2O-1' + 'C-1O-1'+'H1' + ''),
+    'z+1-c-1': mass.Composition(formula='H-2O-1' + 'ON-1H1' + 'H-2O-1' + 'NH3' + 'H-1'),
+    }
+
+def compodict_to_elementaldict(compodict):
+    """
+    Function that helps to convert a composition dictionary to an elemental one (input for correct theoretical envelope).
+    :param compodict:
+    :return: dict
+    """
+
+    elem_comp_dict ={}
+    for s in compodict:
+        # print(s)
+        # print(compodict[s])
+
+        if 'H' in s:
+            elem_comp_dict['H'] = compodict[s]
+        if 'C[12]' in s:
+            elem_comp_dict['C'] = compodict[s]
+        if 'C[13]' in s:
+            elem_comp_dict['C'] += compodict[s]
+        if 'N[14]' in s:
+            elem_comp_dict['N'] = compodict[s]
+        if 'N[15]' in s:
+            elem_comp_dict['N'] += compodict[s]
+        elif 'O' in s:
+            elem_comp_dict['O'] = compodict[s]
+        elif 'S' in s:
+            elem_comp_dict['S'] = compodict[s]
+        elif 'Se' in s:
+            elem_comp_dict['Se'] = compodict[s]
+        elif 'Fe' in s:
+            elem_comp_dict['Fe'] = compodict[s]
+    return elem_comp_dict
 
 
 def compositionobj_to_dict(pyteo_comp_obj, ss_num, inter_mods, mods, iontype):
@@ -24,116 +103,52 @@ def compositionobj_to_dict(pyteo_comp_obj, ss_num, inter_mods, mods, iontype):
     :return: dict, with the tru elemental composition
     """
 
+    reality_bool = True
 
-    elem_comp_dict = {}
-    elem_ls = ['C', 'H', 'N', 'O','S','Fe']
+    elemcompo = pyteo_comp_obj[0]
+    seqbased_dict = compodict_to_elementaldict(elemcompo)
 
-    for element in elem_ls:
-        elem_comp_dict[element] = 0
 
-    print(f"Original composition = {pyteo_comp_obj[0]}")
-    compostr = str(pyteo_comp_obj[0])
-    compostr = compostr.lstrip('Composition(')
-    compostr = compostr.strip(')')
-    compostr = compostr.lstrip('{')
-    compostr = compostr.strip('}')
+    # print(f"Before ion type calculations = {seqbased_dict}")
 
-    composplt = compostr.split(',')
-
-    for x in composplt:
-        # print(x)
-        # print(type(x))
-        x_spl = x.split(":")
-        # print(x_spl[0])
-        # print(x_spl[1])
-        if 'H' in x_spl[0]:
-            elem_comp_dict['H'] = int(x_spl[1].lstrip(' '))
-
-        #Why did I wrote this? I don't remember, but I bet it corrects for a weird bug!
-        #Nov 19th, 2021 = I remember it corrects for the different carbon and nitrogen isotopes calculated by pythonms
-        elif 'C' in x_spl[0]:
-        #If a second isotope is found added to the already key in the dict, don't replace the previous value
-            if elem_comp_dict['C']:
-                elem_comp_dict['C'] += int(x_spl[1].lstrip(' '))
-            else:
-                elem_comp_dict['C'] += int(x_spl[1].lstrip(' '))
-
-        elif 'N' in x_spl[0]:
-            if elem_comp_dict['N']:
-                elem_comp_dict['N'] += int(x_spl[1].lstrip(' '))
-            else:
-                elem_comp_dict['N'] += int(x_spl[1].lstrip(' '))
-
-        elif 'O' in x_spl[0]:
-            elem_comp_dict['O'] = int(x_spl[1].lstrip(' '))
-        elif 'S' in x_spl[0]:
-            elem_comp_dict['S'] = int(x_spl[1].lstrip(' '))
-        elif 'Fe' in x_spl[0]:
-            elem_comp_dict['Fe'] = int(x_spl[1].lstrip(' '))
-
-    print(f"Before ion type calculations = {elem_comp_dict}")
     #Consider Iontype
-    if iontype == 'c-z':
-        elem_comp_dict["H"] += -1
-        elem_comp_dict["O"] += -1
-    elif iontype == 'c-zdot':
-        elem_comp_dict["H"] += -2
-        elem_comp_dict["O"] += -1
-    elif iontype == 'c-y':
-        elem_comp_dict["H"] += 1
-        elem_comp_dict["O"] += -1
-        elem_comp_dict["N"] += 1
-    elif iontype == 'cdot-y':
-        elem_comp_dict["O"] += -1
-        elem_comp_dict["N"] += 1
-    elif iontype == 'a-z':
-        elem_comp_dict["H"] += -4
-        elem_comp_dict["O"] += -2
-        elem_comp_dict["C"] += -1
-        elem_comp_dict["N"] += -1
-    elif iontype == 'a-zdot':
-        elem_comp_dict["H"] += -5
-        elem_comp_dict["O"] += -2
-        elem_comp_dict["C"] += -1
-        elem_comp_dict["N"] += -1
-    elif iontype == 'b-y':
-        elem_comp_dict["H"] += -2
-        elem_comp_dict["O"] += -1
-
-    elif iontype == 'a-y':
-        elem_comp_dict["H"] += -2
-        elem_comp_dict["O"] += -2
-        elem_comp_dict["C"] += -1
-    elif iontype == 'x-c':
-        elem_comp_dict["H"] += -1
-        elem_comp_dict["N"] += 1
-        elem_comp_dict["C"] += 1
-    elif iontype == 'x-cdot':
-        elem_comp_dict["H"] += -2
-        elem_comp_dict["N"] += 1
-        elem_comp_dict["C"] += 1
+    ionelemcompo = iontypedict[iontype]
+    iontypebased_dict = compodict_to_elementaldict(ionelemcompo)
 
 
+    seqion_compo = [seqbased_dict,iontypebased_dict]
+
+    #Aggregating results
+    result = {k: sum(d[k] for d in seqion_compo if k in d) for k in set(k for d in seqion_compo for k in d)}
 
 
+    # print(f"Before ss calculations = {result}")
+    # print(f"ss_num = {ss_num}")
 
-    print(f"ss_num = {ss_num}")
-    print(f"Before ss calculations = {elem_comp_dict}")
+
     #Disulfide bonds
+    disulfide_dict = {}
     if ss_num > 0:
-        elem_comp_dict["H"] -= 2*ss_num
+        disulfide_dict = {"H": -2*ss_num}
 
-    print(f"Before cys mods calculations = {elem_comp_dict}")
+    seqiondisul_compo = [seqbased_dict, iontypebased_dict,disulfide_dict]
+
+    result = {k: sum(d[k] for d in seqiondisul_compo if k in d) for k in set(k for d in seqiondisul_compo for k in d)}
+
+    # print(f"Before cys mods calculations = {result}")
+
+    modcompo_dict = {'H': 0, 'C': 0, 'S': 0, 'O': 0, 'N': 0, 'Fe':0, "Se":0}
     #If there are disulfide bonds modifications to be considered
     if inter_mods:
 
-        print(inter_mods)
-        print(type(inter_mods))
+        # print(inter_mods)
+        # print(type(inter_mods))
         inter_mods = inter_mods.lstrip('(')
         inter_mods = inter_mods.strip(')')
         # print(inter_mods)
         inter_mods_spl = inter_mods.split(',')
         # print(inter_mods)
+
 
         for modss in inter_mods_spl:
             # print(f'Loss = {loss}')
@@ -154,59 +169,59 @@ def compositionobj_to_dict(pyteo_comp_obj, ss_num, inter_mods, mods, iontype):
 
                 if modss == 'shl':
                     # print(loss == 'shl')
-                    elem_comp_dict["H"] += -1
-                    elem_comp_dict["S"] += -1
+                    modcompo_dict["H"] += -1
+                    modcompo_dict["S"] += -1
                 elif modss == 'sshl':
                     # print(loss == "sshl")
-                    elem_comp_dict["H"] += -1
-                    elem_comp_dict["S"] += -2
+                    modcompo_dict["H"] += -1
+                    modcompo_dict["S"] += -2
                 elif modss == 'chhsshl':
                     # print(loss == 'chhsshl')
-                    elem_comp_dict["H"] += -3
-                    elem_comp_dict["S"] += -2
-                    elem_comp_dict["C"] += -1
+                    modcompo_dict["H"] += -3
+                    modcompo_dict["S"] += -2
+                    modcompo_dict["C"] += -1
                 elif modss == 'hl':
                     # print(loss == 'hl')
-                    elem_comp_dict["H"] += -1
+                    modcompo_dict["H"] += -1
                 elif modss == 'h':
                     # print(loss == 'hl')
-                    elem_comp_dict["H"] += 1
+                    modcompo_dict["H"] += 1
                 elif modss == 'sh':
                     # print(loss == 'hl')
-                    elem_comp_dict["H"] += 1
-                    elem_comp_dict["S"] += 1
+                    modcompo_dict["H"] += 1
+                    modcompo_dict["S"] += 1
                 elif modss == "oxyhemeChl":
-                    elem_comp_dict["C"] += 34
-                    elem_comp_dict["H"] += 33
-                    elem_comp_dict["Fe"] += 1
-                    elem_comp_dict["N"] += 4
-                    elem_comp_dict["O"] += 4
-                    elem_comp_dict["S"] += 2
+                    modcompo_dict["C"] += 34
+                    modcompo_dict["H"] += 33
+                    modcompo_dict["Fe"] += 1
+                    modcompo_dict["N"] += 4
+                    modcompo_dict["O"] += 4
+                    modcompo_dict["S"] += 2
                 elif modss == "semioxyhemeChl" or modss == "oxyhemeC":
-                    elem_comp_dict["C"] += 34
-                    elem_comp_dict["H"] += 34
-                    elem_comp_dict["Fe"] += 1
-                    elem_comp_dict["N"] += 4
-                    elem_comp_dict["O"] += 4
-                    elem_comp_dict["S"] += 2
+                    modcompo_dict["C"] += 34
+                    modcompo_dict["H"] += 34
+                    modcompo_dict["Fe"] += 1
+                    modcompo_dict["N"] += 4
+                    modcompo_dict["O"] += 4
+                    modcompo_dict["S"] += 2
 
             else:
                 continue
-    print(f"Before mods calculations = {elem_comp_dict}")
+    # print(f"Before mods calculations = {modcompo_dict}")
     # If there are modifications to be considered
     if len(mods) > 0:
         for mod in mods:
-            print(mod)
+            print(f"mod = {mod}")
             if type(mod) == list:
                 mod_split = mod[0].split("_")
-                print(mod_split)
+                print(f"mod_split = {mod_split}")
                 mods_elemdict = mods_repo[mod_split[0]].elemcomp
                 for elem in mods_elemdict:
                     # print(elem)
                     # print(type(elem))
                     # print(mods_elemdict [elem])
                     # print(type(mods_elemdict[elem]))
-                    elem_comp_dict[elem] += mods_elemdict[elem] * int(mod_split[1])
+                    modcompo_dict[elem] += mods_elemdict[elem] * int(mod_split[1])
             else:
                 # print(f"{mod} composition is: {mods_repo[mod].elemcomp}")
                 mods_elemdict = mods_repo[mod].elemcomp
@@ -215,18 +230,25 @@ def compositionobj_to_dict(pyteo_comp_obj, ss_num, inter_mods, mods, iontype):
                     # print(type(elem))
                     # print(mods_elemdict [elem])
                     # print(type(mods_elemdict[elem]))
-                    elem_comp_dict[elem] += mods_elemdict[elem]
+                    modcompo_dict[elem] += mods_elemdict[elem]
 
-    print(f"Inside compositionobj function = {elem_comp_dict}")
-    #Handeling negative element amounts
-    for elem in elem_comp_dict:
-        print(f"elem_comp_dict[elem] = {elem_comp_dict[elem]}")
-        if elem_comp_dict[elem] < 0:
-            elem_comp_dict[elem] = 0
+    # print(f"Inside compositionobj function = {modcompo_dict}")
 
-    return elem_comp_dict
+    finalls_elemcompo = [seqbased_dict,iontypebased_dict,disulfide_dict,modcompo_dict]
+    finalresult= {k: sum(d[k] for d in finalls_elemcompo  if k in d) for k in set(k for d in finalls_elemcompo  for k in d)}
 
-def elem_dict_to_isotopic_env(elem_dict, isotopologues_num= 15, charge = 4, norm_int = None, error_offset=None):
+    # Handeling negative element amounts
+    for elem in finalresult:
+        print(f"finalresult= {finalresult[elem]}")
+        if finalresult[elem] < 0:
+            reality_bool = False
+            continue
+    print(f"finalls_elemcompo  = {finalresult} and the reality bool is {reality_bool}")
+
+
+    return finalresult, reality_bool
+
+def elem_dict_to_isotopic_env(elem_dict, isotopologues_num= 15, charge = 4, norm_int = None, error_offset=None, resolution_param=17000):
     """
     :param elem_dict: dict, elemental composition of the internal fragment considering losses, ion types, modifications and disulfides
     :param isotopologues_num: The number of theoretical isotopologues to be calculated
@@ -238,10 +260,10 @@ def elem_dict_to_isotopic_env(elem_dict, isotopologues_num= 15, charge = 4, norm
 
     #Adding hydrogens to chemical composition produced by pyteomics,
     # in order to obtained right mz values when calculating envelope with pythoms
-    #masses will be 0.0005 off still
+    #masses will be 0.0005 off still. Reference value of the mass of an electron: 0.000548 Da
     elem_dict["H"] += int(1*charge)
 
-    print(f"elem_dict inside elem_dict_to_isotopic_env function = {elem_dict}")
+    print(f"elem_dict inside elem_dict_to_isotopic_env function = {elem_dict}\nCreating theoretical isotop envelopes with {resolution_param} mass resolving power\n")
 
     #From elem_dict to string
     outstr = ''
@@ -254,7 +276,7 @@ def elem_dict_to_isotopic_env(elem_dict, isotopologues_num= 15, charge = 4, norm
     # print(f"outstr = {outstr}/ type outstr = {type(outstr)}/charge = {charge}")
 
     #Using pythoms isotope envelope
-    mol = pythmole.IPMolecule(outstr, charge= int(charge), resolution = 17000)
+    mol = pythmole.IPMolecule(outstr, charge= int(charge), resolution = float(resolution_param))
     pythmole_mz = mol.bar_isotope_pattern[0]
     pythmole_int = mol.bar_isotope_pattern[1]
 
@@ -266,6 +288,8 @@ def elem_dict_to_isotopic_env(elem_dict, isotopologues_num= 15, charge = 4, norm
     # print(f"error_offset = {error_offset}")
     if error_offset:
         mz_array += error_offset
+        #Correcting for adding Hydrogens and not protons
+        mz_array -= charge*0.0005
 
     if norm_int:
         int_array = (int_array / int_array.max())
@@ -307,7 +331,7 @@ def compare_isoenv(expmz ,expint, theomz, theoint, title, charge, error=None):
 
 
     #Oct 20, 2021 - Great parameters for first pass
-    h = 0.5
+    h = 0.4
     p = 0.3
     wl = 10
 
@@ -330,14 +354,10 @@ def compare_isoenv(expmz ,expint, theomz, theoint, title, charge, error=None):
         maxmz_ls.append(expmz[index])
         maxint_ls.append(exp_int_array_norm[index])
 
+    orgmzls = maxmz_ls
+    orgintls = maxint_ls
+    print(maxmz_ls)
 
-    # print(maxmz_ls)
-    # print(f"theomz = {theomz}")
-    # print(maxmz_ls)
-
-    # indx = 0
-    # if theomz[indx] - maxmz_ls[indx] > 0.1:
-    #     print("Move to next value in maxmz_ls")
 
 
     mzscore = 0
@@ -347,188 +367,133 @@ def compare_isoenv(expmz ,expint, theomz, theoint, title, charge, error=None):
 
     #Scoring by isotopologues
     print("Scoring...")
-    for val in maxmz_ls:
-        diff = abs(val-theomz[0])
-        print(f"diff = {diff}")
-        # print(f"val = {val}")
-        if diff < 0.4:
-            ham = np.where(maxmz_ls == val)
-            # print(f"Where to begin: {ham}")
-            # print(ham[0])
-
-            maxmz_ls = maxmz_ls[ham[0][0]:]
-            maxint_ls = maxint_ls[ham[0][0]:]
-
-            mz_int_zip = zip(maxmz_ls, maxint_ls)
-            mz_int_ls = list(mz_int_zip)
-            print(f"mz_int_ls = {mz_int_ls}")
-            new_ls = []
-            prev = 0
-            for item in mz_int_ls:
-                mzval = item[0]
-                # print(item[0])
-                if prev == 0:
-                    prev = mzval
-                    new_ls.append(item)
-                else:
-                    diff = 0
-                    diff = round(abs(prev - mzval),1)
-                    print(f"{prev} - {mzval} = {diff}")
-
-                    if diff == (1/charge):
-                        new_ls.append(item)
-                        prev = mzval
-                    else:
-                        continue
-            print(f"charge = {charge}")
-            print(f"after charge correction = {new_ls}")
-
-            new_ls_zip = zip(*new_ls)
-            two_ls = list(new_ls_zip)
-            # print(f"two_ls = {two_ls}")
-            # print(two_ls[0])
-            # print(type(two_ls[0]))
-
-            maxmz_array = np.asarray(two_ls[0])
-            maxint_array = np.asarray(two_ls[1])
-
-            print(f"len(maxmz_array) = {len(maxmz_array)}")
-            print(f"len(maxint_array) = {len(maxint_array)}")
-
-            if len(maxmz_array) >= 2:
-
-                trunc_mzarr = maxmz_array
-                trunc_intarr = maxint_array
-
-                print(f"trunc_mzarr = {trunc_mzarr}")
-                print(f"trunc_intarr = {trunc_intarr}")
-
-                if len(trunc_mzarr) > len(theomz):
-
-                    print("mz > int")
-
-                    lendiff = len(theomz) - len(trunc_mzarr)
-                    trunc_mzarr = trunc_mzarr[:lendiff]
-                    trunc_intarr = trunc_intarr[:lendiff]
-
-                    print(len(trunc_mzarr), len(theomz))
 
 
-                elif len(trunc_mzarr) < len(theomz):
+    dictvals = {}
+    for val in maxmz_ls[:5]:
+        for theoval in theomz[:5]:
+            # print(f"val = {val}")
+            diff = abs(val-theoval)
+            # print(f"diff = {diff}")
 
-                    print("mz < int")
+            dictvals[f"{val},{theoval}"] = diff
 
-                    lendiff = len(trunc_mzarr) - len(theomz)
-                    theomz = theomz[:lendiff]
-                    theoint = theoint[:lendiff]
 
-                    print(len(trunc_mzarr), len(theomz))
+    print(f"dictvals = {dictvals}")
 
-                elif len(trunc_mzarr) == len(theomz):
+    #List containing the exp ion mz value and theoretical mz value with the smallest diff
+    # initialmzisotopelogue = min(dictvals, key=dictvals.get)
 
-                    pass
-
-                # corr_mzscore = np.corrcoef(trunc_mzarr, theomz)
-                # corre_mzscore = np.correlate(trunc_mzarr, theomz)
-                # cov_mzscore = np.cov(trunc_mzarr, theomz)
-                diff_mzarr = trunc_mzarr - theomz
-                print(f"Diff = {trunc_mzarr - theomz}")
-                notmached = 0
-                for item in diff_mzarr:
-                    if abs(item) > 0.05:
-                        notmached += 1
-                matchedpoints = len(diff_mzarr) - notmached
-
-                try:
-                    mzscore = (matchedpoints / (len(diff_mzarr))) * 100
-                except ZeroDivisionError:
-                    mzscore = 0
-
-                    # print(f"Let's try numpy's Pearson Product correlation  (mz): {corr_mzscore}")
-                # # print(f"Let's try numpy's correlate (mz): {corre_mzscore}")
-                # # print(f"Let's try numpy's correlate (mz): {cov_mzscore}")
-                # print(f"Std. Dev (mz): {np.std(trunc_mzarr)}")
-                # mzscore = corr_mzscore[0][1]
-
-                # After determining where to began comparison based on mz dimension, let's use numpy's correalte to compare intensity
-                # corr_intscore = np.corrcoef(trunc_intarr, theoint)
-                # print(f"Let's try numpy's Pearson Product correlation: {corr_intscore[0][1]}")
-                # print(f"Std. Dev (mz): {np.std(trunc_intarr)}")
-                # intscore = corr_intscore[0][1]
-
-                diff_intarr = trunc_intarr - theoint
-                print(f"Int Diff = {trunc_intarr - theoint}")
-                notmached_int = 0
-                for item in diff_intarr:
-                    if abs(item) > 0.01:
-                        notmached_int += 1
-                matchedpoints_int = len(diff_intarr) - notmached_int
-                try:
-                    intscore = (matchedpoints_int / (len(diff_intarr))) * 100
-                except ZeroDivisionError:
-                    intscore = 0
-
-                if mzscore == 0:
-
-                    compound_score = 0
-
-                else:
-                    compound_score = round((mzscore + abs(intscore)) / 2, 3)
-
-                # Diagnostic Plotting
-                plt.figure('overalyn', dpi=300)
-                theointzero = np.zeros(len(theomz))
-                expintzero = np.zeros(len(trunc_mzarr))
-
-                plt.clf()
-                plt.title(f"{round(error, 4)}, coor = {mzscore}")
-                plt.scatter(theomz, theointzero, label="Theoretical", color="blue")
-                plt.scatter(trunc_mzarr, expintzero, label="Experimental", color="green")
-
-                plt.xlabel("m/z")
-                plt.ylabel("Relative intensity")
-                plt.legend(loc='best')
-                plt.plot()
-                plt.savefig(title + "_comparescore.png")
-                plt.close()
-
-                plt.figure('overalyn', dpi=300)
-                theointzero = np.zeros(len(theomz))
-                expintzero = np.zeros(len(trunc_intarr))
-
-                plt.clf()
-                plt.title(f"{round(error, 4)}, coor = {intscore}")
-                plt.scatter(theointzero, theoint, label="Theoretical", color="orange")
-                plt.scatter(expintzero, trunc_intarr, label="Experimental", color="magenta")
-
-                plt.xlabel("m/z")
-                plt.ylabel("Relative intensity")
-                plt.legend(loc='best')
-                plt.plot()
-                plt.savefig(title + "_comparescore_int.png")
-                plt.close()
-
-            else:
-                continue
+    initialmzisotopelogue = {key: val for key, val in dictvals.items() if val == min(dictvals.values())}
 
 
 
-        else:
-            # print("No possible to compare isotopologues")
-            # mzscore = 0
-            # intscore = 0
-            # compound_score = 0
-            continue
+    initialmzisotopeloguestr = ""
+    for val in initialmzisotopelogue:
+        initialmzisotopeloguestr = val
+
+
+    isosplits = initialmzisotopeloguestr.split(",")
+
+    print(f"{isosplits} = isosplits")
+
+    maxmz_ls = np.asarray(maxmz_ls)
+
+    expham = np.where(maxmz_ls == float(isosplits[0]))
+
+    theoham = np.where(theomz == float(isosplits[1]))
+
+    print(f"{expham} and {theoham}")
+
+    truncmaxmz_ls = maxmz_ls[expham[0][0]:]
+    truncmaxint_ls = maxint_ls[expham[0][0]:]
+
+    truncmaxmz_array = np.asarray(truncmaxmz_ls)
+    print(truncmaxmz_array)
+    truncmaxint_array = np.asarray(truncmaxint_ls)
+
+    lenmzlimit = len(truncmaxmz_array)
+    print(f"lenmzlimit = {lenmzlimit}")
+    lenintlimit = len(truncmaxint_array)
+    print(f"lenintlimit = {lenintlimit}")
+
+    trunctheomz = theomz[theoham[0][0]:]
+    trunctheoint = theoint[theoham[0][0]:]
+
+    lenmzlimittheo = len(theomz[theoham[0][0]:])
+    lenintlimittheo = len(theoint[theoham[0][0]:])
+
+    print(f"lenmzlimittheo = {len(theomz[theoham[0][0]:])}")
+    print(f"lenintlimittheo = {len(theoint[theoham[0][0]:])}")
+
+    if lenmzlimit < lenmzlimittheo:
+        trunctheomz = trunctheomz[:lenmzlimit]
+        trunctheoint = trunctheoint[:lenintlimit]
+
+    elif lenmzlimit > lenmzlimittheo:
+        truncmaxmz_array = truncmaxmz_array[:lenmzlimittheo]
+        truncmaxint_array = truncmaxint_array[:lenintlimittheo]
 
 
 
+    # trunctheomz = theomz[theoham[0][0]:theoham[0][0]+lenmzlimit]
+    # print(trunctheomz)
+    # trunctheoint = theoint[theoham[0][0]:theoham[0][0]+lenintlimit]
+
+    # corr_mzscore = np.corrcoef(truncmaxmz_array,trunctheomz)
+    # corre_mzscore = np.correlate(truncmaxmz_array,trunctheomz)
+    #
+    # corr_intscore = np.corrcoef(truncmaxint_array, trunctheoint)
+    # corre_intscore = np.correlate(truncmaxint_array, trunctheoint)
+    #
+    # print(f"the scores = {corre_mzscore,corr_mzscore, corre_intscore, corr_intscore}")
+
+    diff_mzarr = truncmaxmz_array - trunctheomz
+    mzscore = diff_mzarr.max()
+    print(f"diff_mzarr={diff_mzarr}, {diff_mzarr.max()}")
+
+    diff_intarr = truncmaxint_array - trunctheoint
+    intscore = diff_intarr.max()
+    print(f"diff_mzarr={diff_intarr}, {diff_intarr.max()}")
+
+    compound_score = mzscore+intscore
+
+    # Diagnostic Plotting
+    plt.figure('overalyn', dpi=300)
+    theointzero = np.zeros(len(theomz))
+    expintzero = np.zeros(len(truncmaxmz_array))
+
+    plt.clf()
+    plt.title(f"{round(error, 4)}, coor = {mzscore}")
+    plt.scatter(theomz, theointzero, label="Theoretical", color="blue")
+    plt.scatter(truncmaxmz_array, expintzero, label="Experimental", color="green")
+    plt.xlabel("m/z")
+    plt.ylabel("Relative intensity")
+    plt.legend(loc='best')
+    plt.plot()
+    plt.savefig(title + "_comparescore.png")
+    plt.close()
+    plt.figure('overalyn', dpi=300)
+    theointzero = np.zeros(len(theomz))
+    expintzero = np.zeros(len(truncmaxint_array))
+    #
+    plt.clf()
+    plt.title(f"{round(error, 4)}, coor = {intscore}")
+    plt.scatter(theointzero, theoint, label="Theoretical", color="orange")
+    plt.scatter(expintzero, truncmaxint_array, label="Experimental", color="magenta")
+    #
+    plt.xlabel("m/z")
+    plt.ylabel("Relative intensity")
+    plt.legend(loc='best')
+    plt.plot()
+    plt.savefig(title + "_comparescore_int.png")
+    plt.close()
+    #
+
+    return truncmaxmz_array, truncmaxint_array, list(diff_mzarr), list(diff_intarr), exp_int_array_norm, compound_score, orgmzls, orgintls
 
 
-
-    return maxmz_ls, maxint_ls, mzscore, intscore, exp_int_array_norm, compound_score
-
-
-def matchmaker2_multipass(theo_dict_tuple, exp_ls, ppm_error, fullprotein_seq=None):
+def matchmaker2_multipass(theo_dict_tuple, exp_ls, mass_res, ppm_error, fullprotein_seq=None):
     """
     Function to match experimental to theoretical ions, when doing multipass searching.
     :param theo_dict_tuple: tuple. First position: str, pass name. Second postiiton: dict, keys are neutral masses; values are internal fragment objects
@@ -548,8 +513,8 @@ def matchmaker2_multipass(theo_dict_tuple, exp_ls, ppm_error, fullprotein_seq=No
     #     print("Unreverse and reverse passes are not the same in the matchmaker!!!!")
 
     #Create header
-    out_str = f"{fullprotein_seq}\nneutral exp_ion\tneutral theoretical ion\tseq\tcharge\tmz_mono\ttmods\tion_type\tcysteine locations\tss_count\tcysteines-with-mods\tcysteine mods" \
-              "\tStart AA\tEnd AA\treverse_bool\tIntensity\tcyclic density\terror\tchemical_composition\tisomz_score\tisoint_score\tfragment_score\n"
+    out_str = f"{fullprotein_seq}\nMass Resolution: {mass_res} \nTolerance error: +/- {ppm_error} ppm\nneutral exp_ion\tneutral theoretical ion\tseq\tcharge\tmz_mono\ttmods\tion_type\tcysteine_locations\tss_count\tcysteines-with-mods\tcysteine mods" \
+              "\tStart AA\tEnd AA\treverse_bool\tIntensity\tcyclic_density\terror\tchemical_composition\tisomz_score\tisoint_score\tfragment_score\n"
 
     print("~~~~~~~ Matching Fragments~~~~~~~~~")
 
@@ -593,13 +558,14 @@ def matchmaker2_multipass(theo_dict_tuple, exp_ls, ppm_error, fullprotein_seq=No
             error = expmass-x
             mz_error = expmz - theo_dict[x].mz_mono
             error_ppm = (error/x)*1000000
-            # print(f" error = {error}")
+            # print(f" error_ppm  = {error_ppm }")
 
-
+            # print(f"\nTheoretical ion = {theo_dict[x]}//expmz = {expmz} with error {error_ppm}")
             #If error is within error tolerance
+
             if abs(error_ppm) < float(ppm_error) and expobj.charge == theo_dict[x].charge:
 
-                print(f"\nTheoretical ion = {theo_dict[x]}//expmz = {expmz} wit error {ppm_error}")
+                # print(f"\nTheoretical ion = {theo_dict[x]}//expmz = {expmz} with error {ppm_error}")
 
                 #Get the theoretical sequence
                 sequence = theo_dict[x].sequence
@@ -615,52 +581,63 @@ def matchmaker2_multipass(theo_dict_tuple, exp_ls, ppm_error, fullprotein_seq=No
                 # Cyclic density = disulfide brige regions per length of protein sequence
                 cyclic_den = ss_num / len(sequence)
 
-                #TODO: Create and modified elemental composition whne the theoretical ion is created, if negative element amounts are obtained don't crete the theoretical on
+                #Create and modified elemental composition whne the theoretical ion is created, if negative element amounts are obtained don't crete the theoretical on
 
                 # Calculating elemental composition only based on simple sequence
                 theo_iso_env = mass.most_probable_isotopic_composition(sequence=sequence)
 
                 #Get correct elemental composition
-                elemcomp_dict = compositionobj_to_dict(theo_iso_env, ss_num, interfragss_mods, interfrag_mods, iontype)
+                elemcomp_dict, reality_bool = compositionobj_to_dict(theo_iso_env, ss_num, interfragss_mods, interfrag_mods, iontype)
                 # print(elemcomp_dict)
 
-                #Calculate isotopic envelope for theoretical fragment
-                theomz_array, theoint_array =elem_dict_to_isotopic_env(elemcomp_dict, charge = expobj.charge, norm_int=True, error_offset=mz_error)
+                #If elemental composition had only positive amounts
+                if reality_bool:
 
-                if theomz_array[0] - exp_mz_array[0] > 1.75:
-                    continue
+                    print("Inside REality Bool")
+
+                    #Calculate isotopic envelope for theoretical fragment
+                    theomz_array, theoint_array =elem_dict_to_isotopic_env(elemcomp_dict, charge = expobj.charge, norm_int=True, error_offset=mz_error,resolution_param=mass_res)
+
+                    if theomz_array[0] - exp_mz_array[0] > 1.75:
+                        continue
+                    else:
+                        matched_ls.append(expobj)
+
+                        #Compare isotopic envelopes
+                        expmass_str = str(round(expmass,2)).replace(".","_")
+                        fig_title = f"exp-{expmass_str}"
+                        sanity_checkI, sanity_checkII, sanity_checkIII, sanity_checkIV, exp_int_array_norm, sanity_checkV, expmaximamz, expmaximaint\
+                            = compare_isoenv(exp_mz_array, exp_int_array,theomz_array, theoint_array,title = fig_title, error = mz_error, charge =  expz)
+
+
+                        # Create comparison plot of theoretical and experimental isotopic envelopes
+                        plt.figure('overalyn', dpi=300)
+
+                        plt.clf()
+                        plt.title(f"{round(error_ppm,4)} ppm")
+                        plt.plot(expmaximamz, expmaximaint, color='green', label="Experimentalone")
+                        plt.plot(exp_mz_array, exp_int_array_norm, color='orange', label = "Experimental")
+                        plt.scatter(theomz_array, theoint_array, label = "Theoretical", marker = 'o')
+                        plt.xlabel("m/z")
+                        plt.ylabel("Relative intensity")
+                        plt.legend(loc='best')
+                        plt.plot()
+
+                        #There are times an OS error arrises, specify full path as a solution
+                        currentdir = os.getcwd()
+                        fullouputname = os.path.join(currentdir, fig_title)
+                        plt.savefig(fullouputname + ".png")
+                        plt.close()
+
+                        # if x in rev_keys:
+                        #     out_str += f"{expmass}\t{theo_dict[x]}\t{cyclic_den}\t{error_ppm}\t{elemcomp_dict}\t{sanity_checkIII}\t{sanity_checkIV}\t{sanity_checkV}\n"
+                        #     out_str += f"{expmass}\t{rev_theo_dict[x]}\t{cyclic_den}\t{error_ppm}\t{elemcomp_dict}\t{sanity_checkIII}\t{sanity_checkIV}\t{sanity_checkV}\n"
+                        # else:
+                        #     out_str += f"{expmass}\t{theo_dict[x]}\t{cyclic_den}\t{error_ppm}\t{elemcomp_dict}\t{sanity_checkIII}\t{sanity_checkIV}\t{sanity_checkV}\n"
+
+                        out_str += f"{expmass}\t{theo_dict[x]}\t{expint}\t{cyclic_den}\t{error_ppm}\t{elemcomp_dict}\t{sanity_checkIII}\t{sanity_checkIV}\t{sanity_checkV}\n"
                 else:
-                    matched_ls.append(expobj)
-
-                    #Compare isotopic envelopes
-                    expmass_str = str(round(expmass,2)).replace(".","-")
-                    fig_title = f"exp-{expmass_str}"
-                    sanity_checkI, sanity_checkII, sanity_checkIII, sanity_checkIV, exp_int_array_norm, sanity_checkV = compare_isoenv(exp_mz_array, exp_int_array,
-                                                                                    theomz_array, theoint_array,title = fig_title, error = mz_error, charge =  expz)
-
-
-                    # Create comparison plot of theoretical and experimental isotopic envelopes
-                    plt.figure('overalyn', dpi=300)
-
-                    plt.clf()
-                    plt.title(f"{round(error_ppm,4)} ppm")
-                    plt.plot(exp_mz_array, exp_int_array_norm, color='orange', label = "Experimental")
-                    plt.scatter(theomz_array, theoint_array, label = "Theoretical", marker = 'o')
-                    plt.xlabel("m/z")
-                    plt.ylabel("Relative intensity")
-                    plt.legend(loc='best')
-                    plt.plot()
-                    plt.savefig(fig_title +".png")
-                    plt.close()
-
-                    # if x in rev_keys:
-                    #     out_str += f"{expmass}\t{theo_dict[x]}\t{cyclic_den}\t{error_ppm}\t{elemcomp_dict}\t{sanity_checkIII}\t{sanity_checkIV}\t{sanity_checkV}\n"
-                    #     out_str += f"{expmass}\t{rev_theo_dict[x]}\t{cyclic_den}\t{error_ppm}\t{elemcomp_dict}\t{sanity_checkIII}\t{sanity_checkIV}\t{sanity_checkV}\n"
-                    # else:
-                    #     out_str += f"{expmass}\t{theo_dict[x]}\t{cyclic_den}\t{error_ppm}\t{elemcomp_dict}\t{sanity_checkIII}\t{sanity_checkIV}\t{sanity_checkV}\n"
-
-                    out_str += f"{expmass}\t{theo_dict[x]}\t{expint}\t{cyclic_den}\t{error_ppm}\t{elemcomp_dict}\t{sanity_checkIII}\t{sanity_checkIV}\t{sanity_checkV}\n"
-
+                    continue
         #Save results
         try:
             output = open(f"{analysisName}_hits" + '.tsv', 'w')
@@ -855,6 +832,8 @@ def matchmaker_terminal_multipass(theo_dict_tuple, exp_ls, rev_theo_dict_tuple=N
 
                 mz_error = ion - expmz
                 error_ppm = (mz_error / ion) * 1000000
+
+                # print(f"error_ppm = {error_ppm}")
 
                 # Match possible if error is less than tolerance
                 if abs(error_ppm) < init_tol:
