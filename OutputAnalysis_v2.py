@@ -427,8 +427,7 @@ def main_ecdciu_plots(files, iontype_exclusion = None):
         seqcovnum, Nindxs, Cindxs, totalsitesnum = seq_cov_number(protein_seq, sitelist)
 
         # Compute sequence coverage and plot/write to file
-        n_ints, c_ints, max_int = compute_seq_cov(protein_seq, sitelist, norm=True,
-                                                  iontype_exclusion=iontype_exclusion, cz_iontypes_only=False)
+        n_ints, c_ints, max_int = compute_seq_cov(protein_seq, sitelist, norm=True, cz_iontypes_only=False)
         datalists = [n_ints, c_ints]
         labels = ['n','c']
 
@@ -2146,9 +2145,9 @@ if __name__ == '__main__':
     #
     #
     #Fucntions to obtain seqeunce information
-    frips_main_seq_cov(hitsfiles, seqcov=True, seqcov_iontype=False, combination=False)
+    # frips_main_seq_cov(hitsfiles, seqcov=True, seqcov_iontype=False, combination=False)
     # frips_main_seq_cov(hitsfiles, termi_frags_stats=True)
-    # frips_main_seq_cov(hitsfiles, intenanalysis=True)
+    frips_main_seq_cov(hitsfiles, intenanalysis=True)
     # average_unmatched(unmatchfiles)
     # merging_interalfrag_tsv(tsvfiles, avg = True)
 
