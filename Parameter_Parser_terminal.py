@@ -409,7 +409,7 @@ def unified_exp_parser(input_file):
     else:
         # unknown filetype
         raise TypeError(filetype)
-    return exp_ions, short_filename
+    return exp_ions, short_filename, filetype
 
 def parse_xtract_peaklist(input_file):
     """
@@ -544,7 +544,7 @@ def parse_single_exp_mmass_zcheck(input_file):
                 continue
             # re-organize arg list to match expected input format
 
-            ordered_list = [arg_list[2], arg_list[5], '', '', arg_list[3], '', '']
+            ordered_list = [arg_list[2], arg_list[5], arg_list[3]]
 
             # create a new exp cluster object using the input data from this line and append it to the peak_list
             peak = ExpIon(ordered_list, True)

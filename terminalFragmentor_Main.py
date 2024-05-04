@@ -940,16 +940,24 @@ class FileDialog(QtWidgets.QFileDialog):
         self.tree = self.findChild(QtWidgets.QTreeView)
         self.tree.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
 
-def write_hit_header():
+def write_hit_header(typeoffile):
     """ Returns a header string with column information for the print_hit_info method """
-    header_line = 'Pass num,cal mz_mono (exp),mz_mono (thy),cal error(ppm),charge,ion type,mods,losses,neutral mass (thy), free_disulfides, cys_location, disulfide mods,' \
-                  'DT mono (bins),Ht (mono),Area (mono),mz_top,DT (top),Ht (top),Area (top),#Peaks in cluster,' \
-                  'top pk index,charge,mz_avg,Ht (cluster),Area (cluster),Score (averagine), noise lvl,' \
-                  'mz_mono (exp) uncal, error (ppm) uncal' + '\n'
+
+    header_line = ''
+
+    if typeoffile == 'isotopes':
+        header_line = 'Pass num,cal mz_mono (exp),mz_mono (thy),cal error(ppm),charge,ion type,mods,losses,neutral mass (thy), free_disulfides, cys_location, disulfide mods,' \
+                      'DT mono (bins),Ht (mono),Area (mono),mz_top,DT (top),Ht (top),Area (top),#Peaks in cluster,' \
+                      'top pk index,charge,mz_avg,Ht (cluster),Area (cluster),Score (averagine), noise lvl,' \
+                      'mz_mono (exp) uncal, error (ppm) uncal' + '\n'
+    elif typeoffile == 'csv':
+        header_line = 'Pass num,cal mz_mono (exp),mz_mono (thy),cal error(ppm),charge,ion type,mods,losses,neutral mass (thy), free_disulfides, cys_location, disulfide mods, intensity,charge,' \
+                      'mz_mono (exp) uncal, error (ppm) uncal' + '\n'
+
     return header_line
 
 
-def print_hits(protein_seq, fragsites_input, outputpath):
+def print_hits(protein_seq, fragsites_input, outputpath, filetype):
     """
     Writes match information to text file (comma-delim) using HitObj's print_hit_info() method
     :param protein_seq: string, sequence of the protein in question
@@ -962,7 +970,7 @@ def print_hits(protein_seq, fragsites_input, outputpath):
     with open(outputpath, 'w') as outfile:
         # write protein seq and header
         # outfile.write('Protein seq:,' + protein_seq + '\n')
-        header_line = write_hit_header()
+        header_line = write_hit_header(filetype)
         outfile.write(header_line)
 
         for site in fragsites_input:
@@ -1143,7 +1151,7 @@ def main_batch_multipass(main_outdir=None, modificationsrepo=None):
     for file_index, exp_file in enumerate(exp_files):
         print('Searching file {} of {}...'.format(file_index + 1, len(exp_files)))
 
-        org_expions, short_filename = Parameter_Parser_terminal.unified_exp_parser(exp_file)
+        org_expions, short_filename, exp_filetype = Parameter_Parser_terminal.unified_exp_parser(exp_file)
 
         #sort exp ions so that replicates are truly replicates and go thru the search space equally
         org_expions.sort()
@@ -1201,7 +1209,7 @@ def main_batch_multipass(main_outdir=None, modificationsrepo=None):
 
             # Save results
 
-            print_hits(protein_seq, results_ls, output_filename)
+            print_hits(protein_seq, results_ls, output_filename, exp_filetype)
             save_fragments(results_ls, output_filename.rstrip('_hits.csv') + '.hits')
 
 
