@@ -15,16 +15,23 @@ In Top-Down Mass Spectrometry protein or protein complexes are fragmented intact
 
 ### Terminal Fragments
 
+###### Note: If the data does not have good mass accuracy, please internally calibrate the dataset before searching....otherwise internal fragment false discovery rate will reach the moon!
+
 #### 1. On the GUI select **Change Output Directory**
 #### 2. Load Modifications Library **(template name: ModificationsRepository.txt)**
 #### 2.5 (optional Waters IM-MS files) **Run IMTBX output extraction and renaming**
-#### 3. Run **Terminal Run**. Formats accepted: .isotopes files, mMass files, CSV files (m/z, int), as well as unmatched files (produced by Fragariyo after running a terminal fragment analysis). **(template file: NISTmAb_TerminalFragments_template.csv)**
+#### 3. Select **Terminal Run**. Formats accepted: .isotopes files, mMass files, CSV files (m/z, int), as well as unmatched files (produced by Fragariyo after running a terminal fragment analysis). **(template file: NISTmAb_TerminalFragments_template.csv)**
 #### 3.5 There is a dropdown menu with sequence coverage graphing capabilities **Data Analysis Options**.
 
-### Internal Fragments 
+### 4. Internal Fragments 
 SEARCH TERMINAL FRAGMENTS FIRST!!! Searching for internal fragments  first it is found to turnup a lot of false positives as the search space can be huge. Unless you have removed terminal fragmetns first by Fragariyo or other methods or somehow your fragmentation expeirment produced 100% internal fragmetns *gasp*), search terminal fragment first. 
 
-#### 4. Running **Input Generator**
+#### 4.1 Running **Input Generator**. It requires unmatched files (left over ions from the terminal search) or ions in CSV format, and also requires xy files (m/x, int) files to obtain isotope information for each experimental ions. 
+#### 4.2.1 Select Mass Ion Resolution, required for proper isotope theoretical production
+#### 4.2.2 Select Mass Error (recommend to be 1 ppm). 
+#### 4.2.3 Select **Internal fragment**. A batch file will be required (template: Internalfrag_batchmode_NISTmAb.csv), where files and param template files (template: NISTmAb_InternalFragments_template.csv) can be run in a high throughput manner.
+
+
 
 
 
