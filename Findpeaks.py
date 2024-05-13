@@ -132,7 +132,7 @@ def isotope_xtractor(main_outdir):
 
     """
     os.chdir(main_outdir)
-    expions = filedialog.askopenfilenames(title='expions to find', filetypes=[('CSV', '.csv')])
+    expions = filedialog.askopenfilenames(title='expions to find (e.g unmatched peaks)', filetypes=[('CSV', '.csv')])
     print(expions)
 
     for expfile in expions:
@@ -151,12 +151,12 @@ def isotope_xtractor(main_outdir):
 
         for index in range(len(pd_file)):
             ion_info = pd_file.loc[index]
-            print(ion_info[0], ion_info[1], ion_info[2])
+            # print(ion_info[0], ion_info[1], ion_info[2])
             expion_dict[ion_info[0]] = []
             expion_dict[ion_info[0]].append(ion_info[1])
             expion_dict[ion_info[0]].append(ion_info[2])
 
-        print(expion_dict)
+        # print(expion_dict)
 
         coordinates = filedialog.askopenfilenames(title='XY Coordinates', filetypes=[('CSV', '.csv'),('XY', '.xy')])
 
@@ -173,7 +173,11 @@ def isotope_xtractor(main_outdir):
 
             if coorfiletype == "csv":
                 # Agilent
-                pd_file = pd.read_csv(file, header=1, engine='python', usecols=['X(MassToCharge)', 'Y(Counts)'])
+                # pd_file = pd.read_csv(file, header=0, engine='python', usecols=['X(MassToCharge)', 'Y(Counts)'])
+                pd_file = pd.read_csv(file, header=None, engine='python')
+                # print(pd_file.head())
+                pd_file.columns = ['X(MassToCharge)', 'Y(Counts)']
+                # print(pd_file.head())
             else:
                 # Breuker
                 pd_file = pd.read_csv(file, header=0, engine='python', usecols=['X(MassToCharge)', 'Y(Counts)'], sep=" ")
@@ -193,8 +197,8 @@ def isotope_xtractor(main_outdir):
                 np_coormz = rndtwo_mzrange['X(MassToCharge)'].to_numpy()
                 np_coorint = rndtwo_mzrange['Y(Counts)'].to_numpy()
 
-                print(np_coormz)
-                print(np_coorint)
+                # print(np_coormz)
+                # print(np_coorint)
 
                 #";" is a separator so that .csv file can be used
                 mz_output = ";".join(str(x) for x in np_coormz)
