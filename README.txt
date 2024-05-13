@@ -10,3 +10,5 @@ Fragariyo is a collection of Python 3 scripts to enable peak matching
 and some data analysis tools for native top-down experiments. See the 
 SOP for more information.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Upon isntallation the user can find template files inside the main Fragariyo folder under the C drive.
