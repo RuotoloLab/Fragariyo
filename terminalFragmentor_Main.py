@@ -244,6 +244,8 @@ def varmods_processing(FragmentSiteObj, modification, amino, var_mods_dict, mods
     #Current number of modifications on the ion
     varmods_num = mods_repo[modification].current_num
 
+    # print(f"FragmentSiteObj.seq in varmodprocesing fxn = {FragmentSiteObj.seq}")
+    # print(f"FragmentSiteObj.resi_dict[amino] in varmodprocesing fxn = {FragmentSiteObj.resi_dict[amino]}")
     #Let's place the modifications
     if len(FragmentSiteObj.resi_dict[amino]) >= mods_repo[modification].max_num:
 
@@ -291,6 +293,8 @@ def varmods_processing(FragmentSiteObj, modification, amino, var_mods_dict, mods
 
     #Reset mods for each fragment
     mods_repo[modification].current_num = 0
+
+    # print(f"var_mods_dict in varmods_processing fxn= {var_mods_dict}")
     return var_mods_dict
 
 def modificator(FragmentSiteObj, mod_ls, charge, var_mods_dict, mz_mono, neutral_mono, mods_repo):
@@ -314,6 +318,7 @@ def modificator(FragmentSiteObj, mod_ls, charge, var_mods_dict, mz_mono, neutral
     accum_neutral_fx = 0
     # print(mods, accum_neutral_fx, neutral_mono)
 
+    # print(f"mods_repo = {mods_repo}")
     for modification in mod_ls:
         mods_repo[modification].current_num = 0
         # print(f"the modObj is {mods_repo[modification]} with type {type(mods_repo[modification])}")
@@ -393,6 +398,9 @@ def modificator(FragmentSiteObj, mod_ls, charge, var_mods_dict, mz_mono, neutral
     neutral_mono += accum_neutral_fx
     # print(mods, accum_neutral_fx, neutral_mono)
 
+    # print(f"mods in modificator fxn= {mods}")
+    # print(f"var_mods_dict in modificator fxn= {var_mods_dict}")
+
     return mz_mono, neutral_mono, mods, var_mods_dict
 
 
@@ -465,6 +473,8 @@ def mass_calc(frag_counter, FragmentSiteObj, ion_types, maxcharge, neutrals = No
                                                                                  var_mods_dict, mz_mono, neutral_mono, modificatorrepo)
 
 
+
+
                         # Removing the hydrogens due to the disulfide bonds
                         neutral_mono = neutral_mono + sscount * (-1.0078 * 2)
                         mz_mono = mz_mono + (sscount * ((-1.0078 / charge) * 2))
@@ -486,6 +496,8 @@ def mass_calc(frag_counter, FragmentSiteObj, ion_types, maxcharge, neutrals = No
                                                                                  var_mods_dict, mz_mono, neutral_mono, modificatorrepo)
 
 
+
+
                         # Modify neutral mass with the modifications possible
                         neutral_mono = neutral_mono + cysmodmass_dict[cys_num][cys_modls] + sscount * (-1.0078 * 2)
                         mz_mono = mz_mono + (cysmodmass_dict[cys_num][cys_modls] / charge) + (
@@ -504,6 +516,8 @@ def mass_calc(frag_counter, FragmentSiteObj, ion_types, maxcharge, neutrals = No
             elif mod_ls:
                 mz_mono, neutral_mono, mods, var_mods_dict = modificator(FragmentSiteObj, mod_ls, charge,
                                                                          var_mods_dict, mz_mono, neutral_mono, modificatorrepo)
+                # print(FragmentSiteObj.seq)
+                # print(f"var_mods_dict in mass_calc = {var_mods_dict}")
 
 
 
@@ -533,6 +547,7 @@ def mass_calc(frag_counter, FragmentSiteObj, ion_types, maxcharge, neutrals = No
                     # print(var_mods_dict)
                     # print(f"There are {len(var_mods_dict)} var mods!")
                     possible_varmodscombos = varmod_combos(var_mods_dict)
+                    # print(f"possible_varmodscombos in mass_calc = {possible_varmodscombos}")
                     for combo in possible_varmodscombos:
                         # print(combo)
                         combols = list(combo)
@@ -684,12 +699,12 @@ def fragments(analysis_name, sequence, types, maxcharge=1, neutral_bool = None, 
     #Produce fragments based on terminal
     for i in range(1, len(sequence)):
         n_frag = sequence[:i]
-        if len(n_frag) > 2:
+        if len(n_frag) > 1:
             n_site = fragment_processing(n_frag, sequence, 'N',ss_ls, intrabroken_ss, natredcys)
             all_sites[f"N_{len(n_frag)}"] = n_site
 
         c_frag = sequence[i:]
-        if len(c_frag) > 2:
+        if len(c_frag) > 1:
             c_site = fragment_processing(c_frag, sequence, 'C',ss_ls, intrabroken_ss, natredcys)
             c_sites[f"C_{len(c_frag)}"] = c_site
 
@@ -995,7 +1010,7 @@ def print_unmatched(ls_expions, outputpath):
     """
 
     csvstripoutname = outputpath.strip(".csv")
-    completoutname = r"{}_Unmathced.csv".format(csvstripoutname)
+    completoutname = r"{}_Unmatched.csv".format(csvstripoutname)
     with open(completoutname, 'w') as outfile:
         # write protein seq and header
         outfile.write('mz,z,int\n')
