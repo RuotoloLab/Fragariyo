@@ -180,9 +180,8 @@ def isotope_xtractor(main_outdir):
                 # print(pd_file.head())
             else:
                 # Breuker
-                pd_file = pd.read_csv(file, header=0, engine='python', usecols=['X(MassToCharge)', 'Y(Counts)'], sep=" ")
-
-
+                pd_file = pd.read_csv(file, header=0, engine='python', usecols=[0,1], sep="\t")
+                pd_file.columns = ['X(MassToCharge)', 'Y(Counts)']
 
 
             for peak in expion_dict:
