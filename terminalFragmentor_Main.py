@@ -22,7 +22,54 @@ from tkinter import messagebox
 from PeakMatch import matchmaker_terminal_multipass
 import multiprocessing
 
+# Adding new custom ion types
+iontypedict = {
+    'M': mass.Composition(formula=''),
+    'M-H2O': mass.Composition(formula='H-2O-1'),
+    'M-NH3': mass.Composition(formula='N-1H-3'),
+    'a': mass.Composition(formula='H-2O-1' + 'C-1O-1'),
+    'adot': mass.Composition(formula='H-2O-1' + 'C-1O-1' + 'H1'),
+    'a-H2O': mass.Composition(formula='H-2O-1' + 'C-1O-1' + 'H-2O-1'),
+    'a-NH3': mass.Composition(formula='H-2O-1' + 'C-1O-1' + 'N-1H-3'),
+    'b': mass.Composition(formula='H-2O-1'),
+    'b-H2O': mass.Composition(formula='H-2O-1' + 'H-2O-1'),
+    'b-NH3': mass.Composition(formula='H-2O-1' + 'N-1H-3'),
+    'c': mass.Composition(formula='H-2O-1' + 'NH3'),
+    'c-1': mass.Composition(formula='H-2O-1' + 'NH3' + 'H-1'),
+    'c-dot': mass.Composition(formula='H-2O-1' + 'NH3' + 'H1'),
+    'c+1': mass.Composition(formula='H-2O-1' + 'NH3' + 'H1'),
+    'c+2': mass.Composition(formula='H-2O-1' + 'NH3' + 'H2'),
+    'c-H2O': mass.Composition(formula='H-2O-1' + 'NH3' + 'H-2O-1'),
+    'c-NH3': mass.Composition(formula='H-2O-1'),
+    'x': mass.Composition(formula='H-2O-1' + 'CO2'),
+    'x-H2O': mass.Composition(formula='H-2O-1' + 'CO2' + 'H-2O-1'),
+    'x-NH3': mass.Composition(formula='H-2O-1' + 'CO2' + 'N-1H-3'),
+    'y': mass.Composition(formula=''),
+    'y-H2O': mass.Composition(formula='H-2O-1'),
+    'y-NH3': mass.Composition(formula='N-1H-3'),
+    'z': mass.Composition(formula='H-2O-1' + 'ON-1H-1'),
+    'zdot': mass.Composition(formula='H-2O-1' + 'ON-1'),
+    'z+1': mass.Composition(formula='H-2O-1' + 'ON-1H1'),
+    'z+2': mass.Composition(formula='H-2O-1' + 'ON-1H2'),
+    'z+3': mass.Composition(formula='H-2O-1' + 'ON-1H3'),
+    'z-H2O': mass.Composition(formula='H-2O-1' + 'ON-1H-1' + 'H-2O-1'),
+    'z-NH3': mass.Composition(formula='H-2O-1' + 'ON-1H-1' + 'N-1H-3'),
+    'c-z':mass.Composition(formula='H-2O-1' + 'NH3' + 'H-2O-1' + 'ON-1H-1'),
+    'c-zdot': mass.Composition(formula='H-2O-1' + 'NH3' + 'H-2O-1' + 'ON-1'),
+    'c-z+1': mass.Composition(formula='H-2O-1' + 'NH3' + 'H-2O-1' + 'ON-1H1'),
+    'c-y': mass.Composition(formula='H-2O-1' + 'NH3' + ''),
+    'cdot-y': mass.Composition(formula='H-2O-1' + 'NH3' + 'H-1' + ''),
+    'adot-z': mass.Composition(formula='H-2O-1' + 'C-1O-1' + '1H' + 'H-2O-1' + 'ON-1H-1'),
+    'adot-zdot': mass.Composition(formula='H-2O-1' + 'C-1O-1' + '1H' + 'H-2O-1' + 'ON-1'),
+    'adot-z+1': mass.Composition(formula='H-2O-1' + 'C-1O-1' + '1H' + 'H-2O-1' + 'ON-1H1'),
+    'a-y': mass.Composition(formula='H-2O-1' + 'C-1O-1' + ''),
+    'b-y': mass.Composition(formula='H-2O-1' + ''),
+    'adot-y': mass.Composition(formula='H-2O-1' + 'C-1O-1'+'H1' + ''),
+    'z+1-c-1': mass.Composition(formula='H-2O-1' + 'ON-1H1' + 'H-2O-1' + 'NH3' + 'H-1'),
+    }
 
+
+mass.std_ion_comp.update(iontypedict)
 
 class FragmentSite:
     """
