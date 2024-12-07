@@ -1,5 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
-<interface version="1.2">
+<interface version="1.4" author="PygubuDesigner 0.39.3">
+  <project>
+    <settings />
+    <customwidgets />
+  </project>
   <object class="tk.Toplevel" id="CIU_app_top">
     <property name="container">false</property>
     <property name="height">300</property>
@@ -9,6 +13,7 @@
     <property name="width">200</property>
     <child>
       <object class="ttk.Frame" id="Logo_Panel">
+        <property name="cursor">arrow</property>
         <property name="height">75</property>
         <property name="width">730</property>
         <layout manager="grid">
@@ -21,7 +26,8 @@
         </containerlayout>
         <child>
           <object class="ttk.Label" id="Logo_Image">
-            <property name="image">logoredo_DP2.png</property>
+            <property name="justify">left</property>
+            <property name="state">normal</property>
             <layout manager="grid">
               <property name="column">0</property>
               <property name="columnspan">3</property>
@@ -29,14 +35,14 @@
               <property name="pady">10</property>
               <property name="row">0</property>
             </layout>
-            <containerlayout manager="grid">
+            <containerlayout manager="pack">
               <property name="propagate">False</property>
             </containerlayout>
           </object>
         </child>
         <child>
           <object class="ttk.Button" id="Button_about">
-            <property args="" cbtype="simple" name="command" type="command">on_button_about_clicked</property>
+            <property name="command" args="" cbtype="simple" type="command">on_button_about_clicked</property>
             <property name="text" translatable="yes">About</property>
             <layout manager="grid">
               <property name="column">1</property>
@@ -48,13 +54,28 @@
         </child>
         <child>
           <object class="ttk.Button" id="Button_help">
-            <property args="" cbtype="simple" name="command" type="command">on_button_help_clicked</property>
+            <property name="command" args="" cbtype="simple" type="command">on_button_help_clicked</property>
             <property name="text" translatable="yes">Help</property>
             <layout manager="grid">
               <property name="column">0</property>
               <property name="pady">10</property>
               <property name="row">0</property>
               <property name="sticky">nw</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Label" id="logolabel" named="True">
+            <property name="cursor">arrow</property>
+            <property name="font">TkDefaultFont</property>
+            <property name="image">headerlogo.png</property>
+            <property name="text" translatable="yes">label4</property>
+            <layout manager="place">
+              <property name="anchor">nw</property>
+              <property name="relx">0.4</property>
+              <property name="rely">0.19</property>
+              <property name="x">0</property>
+              <property name="y">0</property>
             </layout>
           </object>
         </child>
@@ -101,7 +122,7 @@
             </child>
             <child>
               <object class="ttk.Button" id="Button_modsrepo">
-                <property cbtype="simple" name="command" type="command">on_button_modsrepo_clicked</property>
+                <property name="command" cbtype="simple" type="command">on_button_modsrepo_clicked</property>
                 <property name="takefocus">false</property>
                 <property name="text" translatable="yes">Modifications Library</property>
                 <property name="width">20</property>
@@ -120,7 +141,7 @@
             </child>
             <child>
               <object class="ttk.Button" id="Button_IMTBXRenaming">
-                <property cbtype="simple" name="command" type="command">on_button_IMTBXrenamed_clicked</property>
+                <property name="command" cbtype="simple" type="command">on_button_IMTBXrenamed_clicked</property>
                 <property name="text" translatable="yes">IMTBX ouput extraction and renaming</property>
                 <property name="width">20</property>
                 <layout manager="grid">
@@ -166,7 +187,7 @@
             </child>
             <child>
               <object class="ttk.Button" id="Button_change_outputdir">
-                <property args="" cbtype="simple" name="command" type="command">on_button_changedir_clicked</property>
+                <property name="command" args="" cbtype="simple" type="command">on_button_changedir_clicked</property>
                 <property name="text" translatable="yes">Change Output Directory</property>
                 <property name="width">20</property>
                 <layout manager="grid">
@@ -267,7 +288,7 @@
             </containerlayout>
             <child>
               <object class="ttk.Button" id="Button_termrun">
-                <property cbtype="simple" name="command" type="command">on_terminal_run_clicked</property>
+                <property name="command" cbtype="simple" type="command">on_terminal_run_clicked</property>
                 <property name="compound">left</property>
                 <property name="takefocus">false</property>
                 <property name="text" translatable="yes">III.I Terminal Run</property>
@@ -316,19 +337,19 @@ Fragmentation</property>
                     <property name="tearoff">false</property>
                     <child>
                       <object class="tk.Menuitem.Command" id="Menucommand_singleseqcov">
-                        <property cbtype="simple" name="command" type="command">on_singleseqcov_clicked</property>
+                        <property name="command" cbtype="simple" type="command">on_singleseqcov_clicked</property>
                         <property name="label" translatable="yes">Sequence Coverage (singles)</property>
                       </object>
                     </child>
                     <child>
                       <object class="tk.Menuitem.Command" id="Menucommand_comboseqcov">
-                        <property cbtype="simple" name="command" type="command">on_combinedeqcov_clicked</property>
+                        <property name="command" cbtype="simple" type="command">on_combinedeqcov_clicked</property>
                         <property name="label" translatable="yes">Sequence Coverage (combined)</property>
                       </object>
                     </child>
                     <child>
                       <object class="tk.Menuitem.Command" id="Menucommand_termFragmenplotterInput">
-                        <property cbtype="simple" name="command" type="command">on_termfragplotterinput_clicked</property>
+                        <property name="command" cbtype="simple" type="command">on_termfragplotterinput_clicked</property>
                         <property name="label" translatable="yes">Sequence Plot (ClipsMS Style)</property>
                       </object>
                     </child>
@@ -369,7 +390,7 @@ Fragmentation</property>
             </containerlayout>
             <child>
               <object class="ttk.Button" id="Button_importxy">
-                <property cbtype="simple" name="command" type="command">on_button_importxy_clicked</property>
+                <property name="command" cbtype="simple" type="command">on_button_importxy_clicked</property>
                 <property name="compound">left</property>
                 <property name="text" translatable="yes">IV.I  Input Generator</property>
                 <property name="width">5</property>
@@ -388,7 +409,7 @@ Fragmentation</property>
             </child>
             <child>
               <object class="ttk.Button" id="Button_internalrun">
-                <property cbtype="simple" name="command" type="command">on_internal_run_clicked</property>
+                <property name="command" cbtype="simple" type="command">on_internal_run_clicked</property>
                 <property name="compound">left</property>
                 <property name="text" translatable="yes">IV.II.III Internal Run</property>
                 <property name="width">5</property>
@@ -433,19 +454,19 @@ Fragmentation</property>
                     <property name="tearoff">false</property>
                     <child>
                       <object class="tk.Menuitem.Command" id="Menucommand_mergingInternal">
-                        <property cbtype="simple" name="command" type="command">on_merginginternal_clicked</property>
+                        <property name="command" cbtype="simple" type="command">on_merginginternal_clicked</property>
                         <property name="label" translatable="yes">Merging Ouputs</property>
                       </object>
                     </child>
                     <child>
                       <object class="tk.Menuitem.Command" id="Menucommand_averagingInternal">
-                        <property cbtype="simple" name="command" type="command">on_averaginginternal_clicked</property>
+                        <property name="command" cbtype="simple" type="command">on_averaginginternal_clicked</property>
                         <property name="label" translatable="yes">Averaging Outputs</property>
                       </object>
                     </child>
                     <child>
                       <object class="tk.Menuitem.Command" id="Menucommand_InternalFragmentPlotter">
-                        <property cbtype="simple" name="command" type="command">on_internfragplotter_clicked</property>
+                        <property name="command" cbtype="simple" type="command">on_internfragplotter_clicked</property>
                         <property name="label" translatable="yes">Internal Frag Sequence Plot (ClipsMS Style)</property>
                       </object>
                     </child>
