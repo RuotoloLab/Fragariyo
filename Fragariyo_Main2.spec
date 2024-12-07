@@ -6,16 +6,15 @@ import sys ; sys.setrecursionlimit(sys.getrecursionlimit() * 5)
 block_cipher = None
 
 b = [
-    ('C:\\Users\\caror\\AppData\\Roaming\\Python\\Python37\\site-packages\\sklearn\\.libs\\vcomp140.dll', '.\\sklearn\\.libs')
     ]
 	
 resource_files = [
 ('UI/*', 'UI'),
 ('tooltips.txt', '.'),
-('C:\\Users\\caror\\AppData\\Roaming\\Python\\Python37\\site-packages\\PyQt5\\Qt5\\bin\\*','PyQt5\\Qt5\\bin')]
+('C:\\Program Files\\Python312\\Lib\\site-packages\\PyQt5\\Qt5\\bin\\*','PyQt5\\Qt5\\bin')]
 
 a = Analysis(['Fragariyo_Main.py'],
-             pathex=['C:\\Users\\caror\\PycharmProjects\\fragmentor_build', 'C:\\Users\\caror\\AppData\\Roaming\\Python\\Python37\\site-packages\\PyQt5\\Qt5\bin'],
+             pathex=['C:\\Users\\caror\\Fragariyo', 'C:\\Program Files\\Python312\\Lib\\site-packages\\PyQt5\\Qt5\\bin'],
              binaries=b,
              datas=resource_files,
              hiddenimports=[],

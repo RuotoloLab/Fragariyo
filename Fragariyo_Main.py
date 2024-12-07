@@ -11,7 +11,6 @@ Pieces of code from Carolina Rojas Ramirez' Fragmentor (internal fragment analys
 import terminalFragmentor_Main
 import InternalFragmentor_Main
 import Findpeaks
-import pickle
 import os
 import sys
 import pygubu
