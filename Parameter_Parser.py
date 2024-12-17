@@ -172,7 +172,14 @@ def parse_param_template_batch_multipass(param_file):
             params.arr = mods_fromstr_tols(modstr)
             # print(f"params.arr= {params.arr}")
             modstr = splits[ppos['noncys_mods']]
-            params.noncysmods = mods_fromstr_tols(modstr)
+            # print(modstr)
+
+            # If the non
+            if modstr:
+                params.noncysmods = mods_fromstr_tols(modstr)
+            else:
+                params.noncysmods = []
+
             params.r = splits[ppos['r']]
 
             #Disulfide_analysis

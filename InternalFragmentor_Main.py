@@ -382,25 +382,12 @@ def mass_calc(seq, types, maxcharge, dictionary, ss_bonds=None, cysmod_dict = No
 
             # If there is no disulfides to be considered, but only modifications
             elif modobj:
+                print(f"modobj = {modobj}")
                 mz_mono, neutral_mono, mods, var_mods_dict = modificator(residue_census, modobj, charge,
                                                                          var_mods_dict, mz_mono, neutral_mono,libraryofmods)
 
-            # # If neutrals are to be considered!
-            # neutloss = ''
-            # if neutrals == 'NH3':
-            #     # print("Adding ammonia!")
-            #     mz_mono = mz_mono + (-17.02655 / charge)
-            #     neutral_mono = neutral_mono + -17.02655
-            #     neutloss += neutrals
-            #
-            #
-            # elif neutrals == 'H2O':
-            #     # print("Adding water!")
-            #     mz_mono = mz_mono + (-18.01056 / charge)
-            #     neutral_mono = neutral_mono + -18.01056
-            #     neutloss += neutrals
 
-            # Creating theoretical ion
+
 
             # If there were variable modifications to considered
             if var_mods_dict:
@@ -437,12 +424,15 @@ def mass_calc(seq, types, maxcharge, dictionary, ss_bonds=None, cysmod_dict = No
 
             else:
 
+                # Creating theoretical ion
                 modscopy = mods.copy()
                 interobj = interfrag(mz_mono, charge, ion_type, seq, cys_num, neutral_mono, modscopy, cysloc,
                                          sscount, mods_cys, iseqstart, iseqend, reverse_flag)
 
                 dictionary[interobj.mono_neutral] = interobj
                 # print(f"Interobj {interobj}")
+
+
 
 
 
