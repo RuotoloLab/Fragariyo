@@ -616,8 +616,9 @@ def ifragments(analysis_name, sequence, types=('b', 'y'), maxcharge=1, maxstart 
                     counter += 1
 
             else:
-                # print("Not Considering Cysteines!")
-                if len(modbool) >=1:
+                # print(f"modsdictio = {modsdictio}")
+                # print(f"modbool = {modbool}")
+                if modbool[0] != "FALSE":
                     # print("Considering modifications!")
                     mass_calc(iseq, types, maxcharge, global_dict, ss_bonds=0, cysmod_dict=0,
                               cys_num=0, cysloc=0, sscount=0, iseqstart=iseqstart, iseqend=iseqend, reverse_flag=reverse_seq,
